@@ -1,0 +1,11 @@
+title: Welcome to Markdeck
+theme: minimal
+fonts:
+  heading: "Manrope"
+  body: "Inter"
+  mono: "JetBrains Mono"
+colors:
+  bg: "#0a0a0a"
+  fg: "#e8e8e8"
+  accent: "#60a5fa"
+  muted: "#737373"

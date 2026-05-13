@@ -1,0 +1,525 @@
+@import "tailwindcss";
+
+@source "../../views";
+@source "../../views/themes";
+@source "../../../presentations/**/*.md";
+
+/* ===== Slide deck core ===== */
+
+.deck > .slide {
+  display: none;
+}
+
+.deck > .slide.is-current {
+  display: flex;
+}
+
+/* Counter ring — circle progress around the N/M label */
+.deck-counter-ring circle[data-deck-target="progress"] {
+  transition: stroke-dashoffset 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Overview thumbnails — visible focus ring for keyboard navigation */
+[data-deck-target="overview"] button:focus-visible {
+  outline: 2px solid var(--md-accent);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+/* Speaker peek — corner notes / next-slide preview, toggled by N/P */
+.speaker-peek {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  z-index: 25;
+  pointer-events: none;
+  border: 1px solid color-mix(in oklab, var(--md-muted) 40%, transparent);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  background: color-mix(in oklab, var(--md-bg) 45%, transparent);
+  backdrop-filter: blur(6px) saturate(110%);
+  -webkit-backdrop-filter: blur(6px) saturate(110%);
+  opacity: 0.7;
+  font-family: var(--md-font-body);
+  color: var(--md-fg);
+}
+
+.speaker-peek:hover { opacity: 0.95; }
+
+.speaker-peek__label {
+  font-size: 10px;
+  font-family: var(--md-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--md-muted);
+  margin-bottom: 0.45rem;
+}
+
+.speaker-peek--notes {
+  max-width: 460px;
+  max-height: 42vh;
+  overflow: auto;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.speaker-peek--notes .speaker-peek__body {
+  max-width: none;
+  margin: 0;
+}
+
+.speaker-peek--notes .speaker-peek__body p { margin: 0 0 0.5em; }
+.speaker-peek--notes .speaker-peek__body p:last-child { margin-bottom: 0; }
+.speaker-peek--notes .speaker-peek__body h1,
+.speaker-peek--notes .speaker-peek__body h2,
+.speaker-peek--notes .speaker-peek__body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 0.4em;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+.speaker-peek--notes .speaker-peek__body ul,
+.speaker-peek--notes .speaker-peek__body ol { margin: 0.3em 0; padding-left: 1.2em; }
+.speaker-peek--notes .speaker-peek__body code { font-size: 12px; }
+.speaker-peek--notes .speaker-peek__body pre {
+  font-size: 12px;
+  padding: 0.5em 0.7em;
+  line-height: 1.5;
+}
+
+.speaker-peek--preview {
+  width: 380px;
+}
+
+.speaker-peek--preview .thumb-preview {
+  width: 100%;
+}
+
+/* Toggled visibility on the current slide only */
+body.peek-notes   .slide.is-current > .speaker-peek--notes,
+body.peek-preview .slide.is-current > .speaker-peek--preview {
+  display: block;
+}
+
+/* Slide preview thumbnails — render real slide HTML scaled into a 16:9 box */
+.thumb-preview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--md-bg);
+  font-family: var(--md-font-body);
+}
+
+.thumb-preview .thumb-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 720px;
+  padding: 50px 80px;
+  transform-origin: top left;
+  transform: scale(0.22);  /* JS overrides per actual thumb width */
+  pointer-events: none;
+  max-width: none;
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.45;
+}
+
+.thumb-preview .thumb-content h1 { font-size: 76px; line-height: 1.05; margin: 0 0 0.4em; }
+.thumb-preview .thumb-content h2 { font-size: 56px; line-height: 1.1;  margin: 0 0 0.4em; }
+.thumb-preview .thumb-content h3 { font-size: 40px; line-height: 1.2;  margin: 0.4em 0 0.3em; }
+.thumb-preview .thumb-content pre { font-size: 20px; line-height: 1.5; padding: 0.7em 1em; }
+.thumb-preview .thumb-content pre.mermaid { font-size: 16px; }
+.thumb-preview .thumb-content code { font-size: 22px; }
+.thumb-preview .thumb-content img { max-height: 360px; }
+
+/* ============================================================
+   Print → PDF: Cmd+P → Save as PDF
+   ============================================================ */
+@media print {
+  @page {
+    size: 1280px 720px;
+    margin: 0;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--md-bg) !important;
+    color: var(--md-fg) !important;
+    overflow: visible !important;
+    width: 1280px;
+    height: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Each slide gets its own page; force all to be visible */
+  .deck > .slide,
+  .deck > .slide.is-current {
+    display: flex !important;
+    position: relative !important;
+    inset: auto !important;
+    width: 1280px !important;
+    height: 720px !important;
+    overflow: hidden !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    break-after: page;
+    break-inside: avoid;
+    font-size: 24px;
+  }
+
+  .deck > .slide:last-of-type {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Hide all UI chrome (everything fixed-positioned except .slide) */
+  .fixed,
+  [data-deck-target="overview"],
+  [data-deck-target="help"],
+  .deck-counter-ring {
+    display: none !important;
+  }
+}
+
+.slide {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 6vmin 8vmin;
+  font-size: clamp(24px, 3.2vmin, 42px);
+}
+
+/* ===== Slide prose (shared) ===== */
+
+.slide-content {
+  width: 100%;
+  max-width: 90ch;
+  margin: 0 auto;
+}
+
+/* Palette text colors — use as <span class="accent">…</span> etc. */
+.slide-content .accent { color: var(--md-accent); }
+.slide-content .muted  { color: var(--md-muted); }
+.slide-content .fg     { color: var(--md-fg); }
+.slide-content .bg     { color: var(--md-bg); }
+
+/* Multi-column layouts — drop <div class="cols"> in markdown */
+.slide-content .cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2em;
+  align-items: start;
+  margin: 0.6em 0;
+}
+
+.slide-content .cols-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5em;
+  align-items: start;
+  margin: 0.6em 0;
+}
+
+.slide-content .cols > *,
+.slide-content .cols-3 > * {
+  min-width: 0;
+}
+
+.slide-content .cols > * > :first-child,
+.slide-content .cols-3 > * > :first-child {
+  margin-top: 0;
+}
+
+.slide-content h1 {
+  font-family: var(--md-font-heading);
+  font-size: clamp(3rem, 7.5vmin, 6.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0 0 0.6em;
+}
+
+.slide-content h2 {
+  font-family: var(--md-font-heading);
+  font-size: clamp(2.4rem, 5.5vmin, 4.2rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  margin: 0.4em 0 0.5em;
+}
+
+.slide-content h3 {
+  font-family: var(--md-font-heading);
+  font-size: clamp(1.7rem, 4vmin, 2.8rem);
+  font-weight: 500;
+  margin: 0.5em 0 0.4em;
+}
+
+.slide-content p,
+.slide-content li {
+  line-height: 1.55;
+}
+
+.slide-content p + p,
+.slide-content p + ul,
+.slide-content p + ol,
+.slide-content ul + p,
+.slide-content ol + p {
+  margin-top: 0.8em;
+}
+
+.slide-content ul,
+.slide-content ol {
+  padding-left: 1.4em;
+  margin: 0.6em 0;
+}
+
+.slide-content ul li {
+  list-style: disc;
+}
+
+.slide-content ol li {
+  list-style: decimal;
+}
+
+.slide-content li + li {
+  margin-top: 0.25em;
+}
+
+.slide-content strong {
+  color: var(--md-accent);
+  font-weight: 600;
+}
+
+.slide-content em {
+  font-style: italic;
+}
+
+.slide-content a {
+  color: var(--md-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.slide-content blockquote {
+  border-left: 3px solid var(--md-accent);
+  padding-left: 1em;
+  margin: 0.8em 0;
+  color: var(--md-muted);
+  font-style: italic;
+}
+
+.slide-content hr {
+  border: 0;
+  border-top: 1px solid var(--md-muted);
+  opacity: 0.4;
+  margin: 1em 0;
+}
+
+.slide-content table {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 0.85em;
+  width: 100%;
+}
+
+.slide-content th,
+.slide-content td {
+  border: 1px solid color-mix(in oklab, var(--md-muted) 50%, transparent);
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+
+.slide-content th {
+  background: color-mix(in oklab, var(--md-fg) 8%, transparent);
+  font-weight: 600;
+}
+
+/* Inline code */
+.slide-content code {
+  font-family: var(--md-font-mono);
+  font-size: 0.85em;
+  background: color-mix(in oklab, var(--md-fg) 10%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+/* Code blocks: drop inline-code styling, apply block treatment */
+.slide-content pre {
+  font-family: var(--md-font-mono);
+  font-size: clamp(17px, 2.2vmin, 26px);
+  background: color-mix(in oklab, var(--md-fg) 11%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-muted) 40%, transparent);
+  border-radius: 8px;
+  padding: 1em 1.2em;
+  overflow: auto;
+  margin: 0.6em 0;
+  line-height: 1.7;
+}
+
+.slide-content pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+  color: var(--md-fg);
+}
+
+/* Images */
+.slide-content img {
+  max-width: 100%;
+  max-height: 60vh;
+  border-radius: 8px;
+  display: block;
+  margin: 0.6em auto;
+}
+
+/* Mermaid containers — keep them clean */
+.slide-content pre.mermaid {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: center;
+  font-size: inherit;
+}
+
+.slide-content pre.mermaid svg {
+  max-width: 100%;
+  max-height: 65vh;
+  margin: 0 auto;
+}
+
+/* Anchor tags injected by header_ids — hide them */
+.slide-content h1 a.anchor,
+.slide-content h2 a.anchor,
+.slide-content h3 a.anchor {
+  display: none;
+}
+
+/* ===== Rouge syntax highlighting — dark mode (default) ===== */
+.highlight .c, .highlight .c1, .highlight .cm, .highlight .cs { color: #6b7280; font-style: italic; }
+.highlight .k, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt { color: #c084fc; }
+.highlight .s, .highlight .s1, .highlight .s2, .highlight .sb, .highlight .sc, .highlight .sd,
+.highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .ss { color: #86efac; }
+.highlight .si { color: #fbbf24; }
+.highlight .nb { color: #f472b6; }
+.highlight .nc, .highlight .nn { color: #60a5fa; font-weight: 600; }
+.highlight .nf { color: #fde68a; }
+.highlight .no { color: #fda4af; }
+.highlight .mi, .highlight .mf, .highlight .mo, .highlight .mh, .highlight .m { color: #f59e0b; }
+.highlight .o, .highlight .ow { color: #e5e5e5; }
+.highlight .p { color: var(--md-fg); }
+.highlight .n, .highlight .nv, .highlight .vi, .highlight .vg { color: var(--md-fg); }
+
+/* ===== Rouge syntax highlighting — light mode overrides ===== */
+.mode-light .highlight .c, .mode-light .highlight .c1, .mode-light .highlight .cm, .mode-light .highlight .cs { color: #64748b; }
+.mode-light .highlight .k, .mode-light .highlight .kd, .mode-light .highlight .kn, .mode-light .highlight .kp, .mode-light .highlight .kr, .mode-light .highlight .kt { color: #b91c1c; }
+.mode-light .highlight .s, .mode-light .highlight .s1, .mode-light .highlight .s2, .mode-light .highlight .sb, .mode-light .highlight .sc, .mode-light .highlight .sd,
+.mode-light .highlight .se, .mode-light .highlight .sh, .mode-light .highlight .sx, .mode-light .highlight .sr, .mode-light .highlight .ss { color: #047857; }
+.mode-light .highlight .si { color: #b45309; }
+.mode-light .highlight .nb { color: #be185d; }
+.mode-light .highlight .nc, .mode-light .highlight .nn { color: #1d4ed8; font-weight: 600; }
+.mode-light .highlight .nf { color: #b45309; }
+.mode-light .highlight .no { color: #9d174d; }
+.mode-light .highlight .mi, .mode-light .highlight .mf, .mode-light .highlight .mo, .mode-light .highlight .mh, .mode-light .highlight .m { color: #c2410c; }
+.mode-light .highlight .o, .mode-light .highlight .ow { color: #404040; }
+
+/* ===== Theme: minimal ===== */
+.theme-minimal .slide {
+  padding: 6vmin 10vmin;
+}
+.theme-minimal .slide-content h1 {
+  letter-spacing: -0.03em;
+}
+
+/* ===== Theme: editorial ===== */
+.theme-editorial .slide-content h1,
+.theme-editorial .slide-content h2,
+.theme-editorial .slide-content h3 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.theme-editorial .slide-content h1::after {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 3px;
+  background: var(--md-accent);
+  margin-top: 0.4em;
+}
+.theme-editorial .slide-content blockquote {
+  font-size: 1.15em;
+  border-left-width: 4px;
+}
+
+/* ===== Theme: terminal ===== */
+.theme-terminal {
+  --md-cursor: var(--md-accent);
+}
+.theme-terminal .slide-content h1,
+.theme-terminal .slide-content h2,
+.theme-terminal .slide-content h3 {
+  font-family: var(--md-font-mono);
+  font-weight: 500;
+}
+.theme-terminal .slide-content h1::before {
+  content: "$ ";
+  color: var(--md-accent);
+  opacity: 0.7;
+}
+.theme-terminal .slide-content h2::before {
+  content: "# ";
+  color: var(--md-accent);
+  opacity: 0.7;
+}
+.theme-terminal .slide-content h1::after {
+  content: "▍";
+  color: var(--md-accent);
+  animation: terminal-blink 1.2s steps(1) infinite;
+  margin-left: 0.1em;
+}
+@keyframes terminal-blink {
+  50% { opacity: 0; }
+}
+.theme-terminal .slide-content ul li::marker {
+  content: "› ";
+  color: var(--md-accent);
+}
+
+/* ===== Theme: aurora ===== */
+.theme-aurora body,
+.theme-aurora .slide {
+  position: relative;
+}
+.theme-aurora .slide::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(circle at 15% 20%, color-mix(in oklab, var(--md-accent) 30%, transparent) 0%, transparent 35%),
+    radial-gradient(circle at 85% 80%, color-mix(in oklab, var(--md-accent) 20%, transparent) 0%, transparent 40%);
+  filter: blur(40px);
+  z-index: 0;
+  pointer-events: none;
+}
+.theme-aurora .slide > * {
+  position: relative;
+  z-index: 1;
+}
+.theme-aurora .slide-content h1 {
+  background: linear-gradient(135deg, var(--md-fg) 0%, var(--md-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

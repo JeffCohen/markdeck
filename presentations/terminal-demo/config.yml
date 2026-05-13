@@ -1,0 +1,11 @@
+title: Terminal Theme Demo
+theme: terminal
+fonts:
+  heading: "JetBrains Mono"
+  body: "Inter"
+  mono: "JetBrains Mono"
+colors:
+  bg: "#0c0c0c"
+  fg: "#d1d5db"
+  accent: "#34d399"
+  muted: "#525252"

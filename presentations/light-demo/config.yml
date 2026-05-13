@@ -1,0 +1,7 @@
+title: Light Mode Demo
+theme: editorial
+mode: light
+fonts:
+  heading: "Fraunces"
+  body: "Inter"
+  mono: "JetBrains Mono"

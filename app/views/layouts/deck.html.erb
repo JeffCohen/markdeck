@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= @presentation.title %> &middot; Markdeck</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="<%= @presentation.google_fonts_url %>">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+
+    <style>
+      :root {
+        <% @presentation.css_variables.each do |k, v| %><%== k %>: <%== v %>;
+        <% end %>
+      }
+    </style>
+  </head>
+
+  <body
+    class="overflow-hidden m-0 theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
+    style="background: var(--md-bg); color: var(--md-fg); font-family: var(--md-font-body), system-ui, sans-serif;"
+    data-controller="deck"
+    data-deck-count-value="<%= @presentation.slides.size %>"
+  >
+    <%= yield %>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      window.mermaid = mermaid;
+
+      const v = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const bg = v('--md-bg'), fg = v('--md-fg'), accent = v('--md-accent'), muted = v('--md-muted');
+      const fontFamily = v('--md-font-body').replace(/"/g, '');
+
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+          fontFamily: fontFamily,
+          background: bg,
+          mainBkg: bg,
+          primaryColor: bg,
+          primaryTextColor: fg,
+          primaryBorderColor: accent,
+          secondaryColor: bg,
+          secondaryTextColor: fg,
+          secondaryBorderColor: muted,
+          tertiaryColor: bg,
+          tertiaryTextColor: fg,
+          tertiaryBorderColor: muted,
+          nodeBkg: bg,
+          nodeBorder: accent,
+          clusterBkg: bg,
+          clusterBorder: muted,
+          lineColor: muted,
+          textColor: fg,
+          edgeLabelBackground: bg,
+          labelTextColor: fg,
+          titleColor: fg
+        }
+      });
+    </script>
+  </body>
+</html>

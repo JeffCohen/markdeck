@@ -1,0 +1,51 @@
+<% content_for :title, "Markdeck" %>
+
+<header class="border-b border-neutral-800">
+  <div class="max-w-5xl mx-auto px-6 py-10 flex items-baseline justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight">
+      <span class="text-neutral-100">Markdeck</span>
+      <span class="text-neutral-500"> &middot; presentations</span>
+    </h1>
+    <p class="text-sm text-neutral-500">
+      <%= pluralize(@presentations.size, "deck") %>
+    </p>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-6 py-12">
+  <% if @presentations.empty? %>
+    <div class="border border-dashed border-neutral-800 rounded-lg p-12 text-center">
+      <p class="text-neutral-400 mb-2">No presentations yet.</p>
+      <p class="text-sm text-neutral-600">
+        Create a folder under <code class="text-neutral-300">presentations/</code> with a
+        <code class="text-neutral-300">config.yml</code> and a <code class="text-neutral-300">slides/</code> directory.
+      </p>
+    </div>
+  <% else %>
+    <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" data-controller="index">
+      <% @presentations.each do |deck| %>
+        <li>
+          <%= link_to presentation_path(deck), data: { index_target: "link" }, class: "block group rounded-lg border border-neutral-800 hover:border-neutral-600 focus-visible:border-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-600 transition-colors p-6 h-full" do %>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="inline-flex items-center text-[10px] uppercase tracking-wider text-neutral-500 px-2 py-0.5 rounded border border-neutral-800">
+                <%= deck.theme %>
+              </span>
+              <span class="inline-flex items-center text-[10px] uppercase tracking-wider text-neutral-500 px-2 py-0.5 rounded border border-neutral-800">
+                <%= deck.mode %>
+              </span>
+              <span class="text-[10px] uppercase tracking-wider text-neutral-600">
+                <%= pluralize(deck.slides.size, "slide") %>
+              </span>
+            </div>
+            <h2 class="text-lg font-medium text-neutral-100 group-hover:text-white">
+              <%= deck.title %>
+            </h2>
+            <p class="text-sm text-neutral-500 mt-1 truncate">
+              <%= deck.slug %>
+            </p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</main>

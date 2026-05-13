@@ -1,0 +1,103 @@
+<div
+  class="fixed bottom-5 right-6 w-14 h-14 opacity-80 hover:opacity-100 transition-opacity pointer-events-none select-none"
+>
+  <svg viewBox="0 0 56 56" class="deck-counter-ring" width="56" height="56">
+    <circle cx="28" cy="28" r="24" fill="none"
+            stroke="var(--md-muted)" stroke-width="2" opacity="0.35" />
+    <circle cx="28" cy="28" r="18" fill="none"
+            stroke="var(--md-accent)"
+            stroke-width="12"
+            stroke-dasharray="113.0973"
+            stroke-dashoffset="113.0973"
+            transform="rotate(-90 28 28)"
+            opacity="0.85"
+            data-deck-target="progress" />
+  </svg>
+  <div
+    class="absolute inset-0 flex items-center justify-center text-[11px] font-mono leading-none"
+    style="color: var(--md-accent);"
+  >
+    <span data-deck-target="counter">1</span><span class="opacity-50 mx-0.5">/</span><%= presentation.slides.size %>
+  </div>
+  <span
+    class="hidden absolute top-0 right-0 w-2 h-2 rounded-full"
+    style="background: var(--md-accent); box-shadow: 0 0 0 2px var(--md-bg);"
+    data-deck-target="notesDot"
+    title="This slide has speaker notes — press N"
+    aria-label="Slide has speaker notes"
+  ></span>
+</div>
+
+<a
+  href="<%= presentations_path %>"
+  class="fixed top-4 left-6 text-xs font-mono opacity-30 hover:opacity-100 transition-opacity"
+  style="color: var(--md-muted);"
+  data-turbo="false"
+>
+  ← all decks
+</a>
+
+<div
+  data-deck-target="overview"
+  class="hidden fixed inset-0 z-40 overflow-auto p-8"
+  style="background: var(--md-bg);"
+>
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-2xl mb-6" style="font-family: var(--md-font-heading);"><%= presentation.title %></h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <% presentation.slides.each do |slide| %>
+        <button
+          type="button"
+          class="text-left hover:opacity-100 opacity-80 transition-opacity"
+          data-action="click->deck#jumpTo"
+          data-deck-index-param="<%= slide.index %>"
+        >
+          <div class="thumb-preview" style="border: 1px solid var(--md-muted);">
+            <div class="thumb-content slide-content">
+              <%== slide.html %>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2 mt-2">
+            <span class="text-[10px] font-mono" style="color: var(--md-muted);">
+              <%= slide.number %>
+            </span>
+            <span class="text-xs truncate flex-1" style="font-family: var(--md-font-heading);">
+              <%= slide.title %>
+            </span>
+          </div>
+        </button>
+      <% end %>
+    </div>
+    <p class="text-xs mt-8 font-mono" style="color: var(--md-muted);">
+      Arrow keys to navigate &middot; <kbd>Enter</kbd> to jump &middot; <kbd>Esc</kbd> or <kbd>O</kbd> to close
+    </p>
+  </div>
+</div>
+
+<div
+  data-deck-target="help"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center"
+  style="background: rgba(0,0,0,0.85);"
+  data-action="click->deck#toggleHelp"
+>
+  <div class="max-w-md p-8 rounded-md text-sm" style="background: var(--md-bg); border: 1px solid var(--md-muted); color: var(--md-fg);">
+    <h3 class="text-lg mb-4" style="font-family: var(--md-font-heading);">Keyboard shortcuts</h3>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 font-mono text-xs">
+      <dt>→ Space</dt><dd>Next slide</dd>
+      <dt>← Backspace</dt><dd>Previous slide</dd>
+      <dt>Home / End</dt><dd>First / last slide</dd>
+      <dt>O</dt><dd>Toggle overview</dd>
+      <dt>P</dt><dd>Peek next slide (corner)</dd>
+      <dt>N</dt><dd>Peek speaker notes (corner)</dd>
+      <dt>?</dt><dd>Toggle this help</dd>
+      <dt>Esc</dt><dd>Close any overlay</dd>
+    </dl>
+    <p class="text-xs mt-4" style="color: var(--md-muted);">
+      In overview: arrow keys move between thumbnails, Enter jumps to the focused slide.
+    </p>
+    <p class="text-xs mt-2" style="color: var(--md-muted);">
+      Export PDF: <kbd>⌘P</kbd> &rarr; "Save as PDF" &middot; one slide per page, landscape.
+    </p>
+    <p class="text-xs mt-6" style="color: var(--md-muted);">Click anywhere to close</p>
+  </div>
+</div>
