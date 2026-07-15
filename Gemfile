@@ -33,7 +33,7 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Markdown rendering (GitHub Flavored Markdown)
-gem "commonmarker", "~> 2.0"
+gem "commonmarker", "~> 2.9"
 # Syntax highlighting for code fences
 gem "rouge", "~> 4.5"
 
