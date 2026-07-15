@@ -186,6 +186,13 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   .deck-counter-ring {
     display: none !important;
   }
+
+  /* Speaker notes/next-slide peek are for the presenter only — never print,
+     even if left toggled open (they're position:fixed and would otherwise
+     land oddly across paginated slide pages). */
+  .speaker-peek {
+    display: none !important;
+  }
 }
 
 .slide {
