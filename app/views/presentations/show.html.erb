@@ -1,7 +1,69 @@
-<div class="deck">
-  <% @presentation.slides.each do |slide| %>
-    <%= render "presentations/slide", presentation: @presentation, slide: slide %>
-  <% end %>
+<% content_for :title, "#{@presentation.title} · Markdeck" %>
 
-  <%= render "presentations/chrome", presentation: @presentation %>
+<div class="overview-page"
+     style="background: var(--md-bg); color: var(--md-fg); font-family: var(--md-font-body), system-ui, sans-serif; min-height: 100vh;"
+     data-controller="overview-edit palette"
+     data-overview-edit-slug-value="<%= @presentation.slug %>"
+     data-overview-edit-create-url-value="<%= presentation_slides_path(@presentation) %>"
+     data-overview-edit-reorder-url-value="<%= presentation_slide_order_path(@presentation) %>"
+     data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>">
+
+  <header class="overview-page__top">
+    <a href="<%= presentations_path %>" class="overview-page__crumb" data-turbo="false">← all decks</a>
+    <h1 class="overview-page__title">
+      <%= @presentation.title %>
+      <span class="overview-page__subtitle"><%= pluralize(@presentation.slides.size, "slide") %></span>
+    </h1>
+    <div class="overview-page__actions">
+      <a href="<%= presentation_slide_path(@presentation, n: 1) %>"
+         class="editor__btn editor__btn--primary"
+         data-turbo="false">
+        Present →
+      </a>
+    </div>
+  </header>
+
+  <main class="overview-page__grid">
+    <% @presentation.slides.each do |slide| %>
+      <div class="overview-edit__tile theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
+           draggable="true"
+           data-overview-edit-target="tile"
+           data-position="<%= slide.position %>"
+           data-action="dragstart->overview-edit#dragStart dragover->overview-edit#dragOver drop->overview-edit#drop dragend->overview-edit#dragEnd click->overview-edit#presentSlide">
+        <button type="button"
+                class="overview-edit__delete"
+                title="Delete slide"
+                data-action="click->overview-edit#deleteSlide"
+                data-position="<%= slide.position %>">×</button>
+        <a class="overview-edit__edit-pill"
+           href="<%= edit_presentation_slide_path(@presentation, n: slide.position) %>"
+           data-turbo="false"
+           data-action="click->overview-edit#stopPropagation"
+           title="Edit slide">edit</a>
+        <div class="overview-edit__thumb-frame">
+          <div class="overview-edit__thumb slide<%= ' slide--center' if slide.centered? %>">
+            <div class="slide-content">
+              <%== slide.html %>
+            </div>
+          </div>
+        </div>
+        <div class="overview-edit__caption">
+          <span class="overview-edit__num"><%= slide.position %></span>
+          <span class="overview-edit__title"><%= slide.title %></span>
+        </div>
+      </div>
+    <% end %>
+
+    <button type="button"
+            class="overview-edit__tile overview-edit__add"
+            data-action="overview-edit#addSlide">
+      <span>+ new slide</span>
+    </button>
+  </main>
+
+  <footer class="overview-page__footer">
+    <span>Click a slide to present · drag to reorder · "edit" pill to edit · <kbd>⌘K</kbd> to jump</span>
+  </footer>
+
+  <%= render "slides/palette" %>
 </div>

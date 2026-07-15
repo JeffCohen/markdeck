@@ -17,12 +17,13 @@ class MarkdownRenderer
     }
   }.freeze
 
-  def self.render(markdown)
-    new(markdown).render
+  def self.render(markdown, image_base: nil)
+    new(markdown, image_base: image_base).render
   end
 
-  def initialize(markdown)
+  def initialize(markdown, image_base: nil)
     @markdown = markdown.to_s
+    @image_base = image_base
   end
 
   def render
@@ -31,6 +32,8 @@ class MarkdownRenderer
   end
 
   private
+
+  ABSOLUTE_URL = /\A([a-z][a-z0-9+.-]*:|\/|#|data:)/i
 
   def post_process(html)
     fragment = Nokogiri::HTML5.fragment(html)
@@ -48,7 +51,21 @@ class MarkdownRenderer
       end
     end
 
+    rewrite_image_urls(fragment) if @image_base
+
     fragment.to_html
+  end
+
+  def rewrite_image_urls(fragment)
+    fragment.css("img").each do |img|
+      src = img["src"]
+      next if src.nil? || src.empty? || src.match?(ABSOLUTE_URL)
+
+      # Strip a leading "images/" or "./images/" so the importer's output
+      # and hand-written ![](images/foo.png) both resolve.
+      relative = src.sub(/\A\.?\/?images\//, "")
+      img["src"] = "#{@image_base}/#{relative}"
+    end
   end
 
   def replace_with_mermaid(pre, source)

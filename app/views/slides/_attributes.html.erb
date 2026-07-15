@@ -1,0 +1,28 @@
+<div class="editor__attrs">
+  <label class="editor__attr">
+    <input type="checkbox"
+           data-action="change->editor#toggleCenter"
+           <%= "checked" if slide.centered? %>>
+    <span>Center</span>
+  </label>
+
+  <label class="editor__attr">
+    <span class="editor__attr-label">Label</span>
+    <input type="text"
+           data-editor-target="labelInput"
+           data-action="input->editor#setLabel"
+           value="<%= slide.label %>"
+           placeholder="(shown in overview & ⌘K)">
+  </label>
+
+  <label class="editor__attr">
+    <span class="editor__attr-label">Chapter</span>
+    <input type="text"
+           data-editor-target="chapterInput"
+           data-action="input->editor#setChapter"
+           value="<%= slide.chapter %>"
+           placeholder="(optional grouping)">
+  </label>
+
+  <span class="editor__attrs-hint">Front-matter at the top of the file.</span>
+</div>

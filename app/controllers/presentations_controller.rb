@@ -11,6 +11,16 @@ class PresentationsController < ApplicationController
       return
     end
 
-    render layout: "deck"
+    render layout: "themed"
+  end
+
+  def image
+    filename = params[:filename]
+    return head :bad_request if filename.include?("..") || filename.start_with?("/")
+
+    path = Presentation::ROOT.join(params[:slug], "images", filename)
+    return head :not_found unless path.file?
+
+    send_file path.to_s, disposition: "inline"
   end
 end

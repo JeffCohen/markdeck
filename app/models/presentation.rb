@@ -1,3 +1,5 @@
+require "securerandom"
+
 class Presentation
   ROOT = Rails.root.join("presentations").freeze
 
@@ -86,6 +88,80 @@ class Presentation
     }
   end
 
+  def slides_dir
+    @dir.join("slides")
+  end
+
+  def images_dir
+    @dir.join("images")
+  end
+
+  # Next zero-padded NN- prefix at the END of the deck, e.g. "07". New slides
+  # always append; insertion in the middle is handled by create_slide!'s reorder.
+  def next_slide_prefix
+    taken = slides.map { |s| s.basename[/\A(\d+)/, 1].to_i }
+    width = [2, taken.map { |n| n.to_s.length }.max || 2].max
+    n = (taken.max || 0) + 1
+    format("%0#{width}d", n)
+  end
+
+  # Create a new slide file after `after_position` (1-based; nil = end of deck).
+  # Returns the new Slide object.
+  def create_slide!(after_position: nil)
+    prefix = next_slide_prefix
+    path = slides_dir.join("#{prefix}-slide.md")
+    path.binwrite("# New slide\n")
+
+    # If inserting in the middle, run a reorder so the new slide actually
+    # lands at the requested visual position.
+    if after_position
+      reload_slides!
+      target_pos = [[after_position, 0].max, slides.size - 1].min + 1
+      current_pos_of_new = slides.index { |s| s.source_path == path } + 1
+      order = (1..slides.size).to_a
+      order.delete(current_pos_of_new)
+      order.insert(target_pos - 1, current_pos_of_new)
+      reorder!(order)
+    end
+
+    reload_slides!
+    slides.find { |s| s.source_path.basename.to_s.start_with?(prefix + "-") } || slides.last
+  end
+
+  # Reorder slides on disk. `new_order_positions` is the current 1-based
+  # positions in their new order, e.g. [3, 1, 2, 4] meaning "what is currently
+  # slide 3 becomes slide 1; slide 1 → 2; slide 2 → 3; slide 4 stays".
+  # Two-phase rename (everything → unique tmp names → final names) avoids
+  # collisions. Coarse flock guards against concurrent saves.
+  def reorder!(new_order_positions)
+    unless new_order_positions.sort == (1..slides.size).to_a
+      raise ArgumentError, "expected a permutation of 1..#{slides.size}, got #{new_order_positions.inspect}"
+    end
+
+    width = [2, slides.map { |s| s.basename[/\A(\d+)/, 1].to_s.length }.max || 2].max
+
+    slides_dir.join(".reorder.lock").open(File::RDWR | File::CREAT, 0o644) do |lock|
+      lock.flock(File::LOCK_EX)
+
+      tmp_paths = slides.map do |s|
+        s.source_path.dirname.join("#{s.basename}.reorder.#{SecureRandom.hex(4)}")
+      end
+      slides.each_with_index { |s, i| s.source_path.rename(tmp_paths[i]) }
+
+      new_order_positions.each_with_index do |old_pos, new_idx|
+        stem = slides[old_pos - 1].filename_stem
+        target = slides_dir.join("#{format("%0#{width}d", new_idx + 1)}-#{stem}.md")
+        tmp_paths[old_pos - 1].rename(target)
+      end
+    end
+
+    reload_slides!
+  end
+
+  def reload_slides!
+    @slides = load_slides
+  end
+
   private
 
   def default_colors_for_mode
@@ -93,11 +169,10 @@ class Presentation
   end
 
   def load_slides
-    slides_dir = @dir.join("slides")
     return [] unless slides_dir.directory?
 
     slides_dir.glob("*.md").sort_by { |p| p.basename.to_s }.each_with_index.map do |path, idx|
-      Slide.new(index: idx, source_path: path)
+      Slide.new(index: idx, source_path: path, slug: @slug)
     end
   end
 end

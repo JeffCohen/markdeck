@@ -1,0 +1,7 @@
+<div class="deck">
+  <% @presentation.slides.each do |slide| %>
+    <%= render "presentations/slide", presentation: @presentation, slide: slide %>
+  <% end %>
+
+  <%= render "presentations/chrome", presentation: @presentation %>
+</div>

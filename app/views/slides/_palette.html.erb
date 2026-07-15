@@ -1,0 +1,12 @@
+<div class="palette hidden"
+     data-palette-target="root"
+     data-action="click->palette#backdropClick">
+  <div class="palette__panel" data-action="click->palette#stopPropagation">
+    <input type="text"
+           class="palette__input"
+           placeholder="Jump to slide…"
+           data-palette-target="input"
+           data-action="input->palette#filter keydown->palette#keydown">
+    <ul class="palette__results" data-palette-target="results" role="listbox"></ul>
+  </div>
+</div>

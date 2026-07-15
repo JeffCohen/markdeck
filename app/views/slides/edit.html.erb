@@ -1,0 +1,73 @@
+<%
+  prev_slide = @presentation.slides[@slide.index - 1] if @slide.index > 0
+  next_slide = @presentation.slides[@slide.index + 1]
+%>
+<div class="editor"
+     data-controller="editor palette"
+     data-editor-preview-url-value="<%= presentation_previews_path(@presentation) %>"
+     data-editor-save-url-value="<%= presentation_slide_path(@presentation, n: @slide.position) %>"
+     data-editor-done-url-value="<%= presentation_slide_path(@presentation, n: @slide.position) %>"
+     data-editor-etag-value="<%= @slide.etag %>"
+     data-editor-csrf-value="<%= form_authenticity_token %>"
+     data-palette-slides-value="<%= slides_palette_json(@presentation, target: :edit).to_json %>">
+
+  <header class="editor__topbar">
+    <div class="editor__topbar-left">
+      <a href="<%= presentation_path(@presentation) %>" class="editor__crumb" data-turbo="false">← overview</a>
+      <span class="editor__deck-title"><%= @presentation.title %></span>
+    </div>
+
+    <nav class="editor__slidenav" aria-label="Slide navigation">
+      <% if prev_slide %>
+        <a href="<%= edit_presentation_slide_path(@presentation, n: prev_slide.position) %>"
+           data-turbo="false" title="Previous slide">‹</a>
+      <% else %>
+        <span class="editor__slidenav-disabled">‹</span>
+      <% end %>
+      <span class="editor__slidenav-counter"><%= @slide.position %> / <%= @presentation.slides.size %></span>
+      <% if next_slide %>
+        <a href="<%= edit_presentation_slide_path(@presentation, n: next_slide.position) %>"
+           data-turbo="false" title="Next slide">›</a>
+      <% else %>
+        <span class="editor__slidenav-disabled">›</span>
+      <% end %>
+    </nav>
+
+    <div class="editor__actions">
+      <button type="button" data-action="palette#open" class="editor__btn" title="Quick jump (⌘K)">
+        Jump
+        <kbd>⌘K</kbd>
+      </button>
+      <a href="<%= presentation_slide_path(@presentation, n: @slide.position) %>"
+         data-turbo="false"
+         class="editor__btn editor__btn--primary"
+         title="Return to present mode (Esc)">
+        Done
+        <kbd>Esc</kbd>
+      </a>
+      <span class="editor__status" data-editor-target="status">Saved</span>
+    </div>
+  </header>
+
+  <main class="editor__panes">
+    <section class="editor__pane editor__pane--source">
+      <%= render "slides/attributes", slide: @slide %>
+      <textarea data-editor-target="textarea"
+                data-action="input->editor#onInput"
+                spellcheck="false"
+                autocomplete="off"
+                wrap="off"><%= @slide.markdown %></textarea>
+    </section>
+
+    <section class="editor__pane editor__pane--preview">
+      <div class="slide<%= ' slide--center' if @slide.centered? %>"
+           data-editor-target="previewSlide">
+        <div class="slide-content" data-editor-target="preview">
+          <%== @slide.html %>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <%= render "slides/palette" %>
+</div>

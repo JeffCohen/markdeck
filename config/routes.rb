@@ -9,7 +9,15 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  resources :presentations, only: %i[index show], param: :slug
+  resources :presentations, only: %i[index show], param: :slug do
+    get "images/:filename", to: "presentations#image", as: :image,
+        constraints: { filename: /[^\/]+/ }, format: false, on: :member
+
+    resources :slides, only: %i[show edit update create destroy],
+              param: :n, constraints: { n: /\d+/ }
+    resource  :slide_order, only: :update
+    resources :previews, only: :create, module: :presentations
+  end
 
   root "presentations#index"
 end

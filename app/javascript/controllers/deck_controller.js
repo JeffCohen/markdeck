@@ -2,10 +2,11 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["slide", "counter", "overview", "help", "progress", "notesDot"]
-  static values = { count: Number, index: Number }
+  static values = { count: Number, index: Number, slug: String, start: Number }
 
   connect() {
-    this.indexValue = this.readHash()
+    const hashed = this.readHash()
+    this.indexValue = window.location.hash ? hashed : (this.hasStartValue ? this.startValue : hashed)
     this.show(this.indexValue)
     this.keyHandler = this.handleKey.bind(this)
     this.hashHandler = () => {
@@ -207,8 +208,12 @@ export default class extends Controller {
       case "k":
         this.prev(); event.preventDefault(); break
       case "Home":
+      case "f":
+      case "F":
         this.first(); event.preventDefault(); break
       case "End":
+      case "l":
+      case "L":
         this.last(); event.preventDefault(); break
       case "o":
       case "O":
@@ -221,11 +226,19 @@ export default class extends Controller {
         this.togglePeek("notes"); event.preventDefault(); break
       case "?":
         this.toggleHelp(); event.preventDefault(); break
+      case "e":
+      case "E":
+        this.editCurrent(); event.preventDefault(); break
       case "Escape":
         this.toggleOverview(true)
         this.toggleHelp(true)
         document.body.classList.remove("peek-notes", "peek-preview")
         break
     }
+  }
+
+  editCurrent() {
+    if (!this.hasSlugValue) return
+    window.location = `/presentations/${this.slugValue}/slides/${this.indexValue + 1}/edit`
   }
 }

@@ -25,7 +25,7 @@
     <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" data-controller="index">
       <% @presentations.each do |deck| %>
         <li>
-          <%= link_to presentation_path(deck), data: { index_target: "link" }, class: "block group rounded-lg border border-neutral-800 hover:border-neutral-600 focus-visible:border-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-600 transition-colors p-6 h-full" do %>
+          <%= link_to presentation_path(deck), data: { index_target: "link", turbo: false }, class: "block group rounded-lg border border-neutral-800 hover:border-neutral-600 focus-visible:border-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-600 transition-colors p-6 h-full" do %>
             <div class="flex items-center gap-2 mb-3">
               <span class="inline-flex items-center text-[10px] uppercase tracking-wider text-neutral-500 px-2 py-0.5 rounded border border-neutral-800">
                 <%= deck.theme %>

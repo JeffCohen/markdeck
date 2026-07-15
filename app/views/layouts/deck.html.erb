@@ -25,10 +25,15 @@
   <body
     class="overflow-hidden m-0 theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
     style="background: var(--md-bg); color: var(--md-fg); font-family: var(--md-font-body), system-ui, sans-serif;"
-    data-controller="deck"
+    data-controller="deck palette"
     data-deck-count-value="<%= @presentation.slides.size %>"
+    data-deck-slug-value="<%= @presentation.slug %>"
+    data-deck-start-value="<%= (defined?(@start_index) && @start_index) || 0 %>"
+    data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>"
   >
     <%= yield %>
+
+    <%= render "slides/palette" %>
 
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";

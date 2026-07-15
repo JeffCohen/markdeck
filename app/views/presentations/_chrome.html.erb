@@ -29,13 +29,21 @@
 </div>
 
 <a
-  href="<%= presentations_path %>"
+  href="<%= presentation_path(presentation) %>"
   class="fixed top-4 left-6 text-xs font-mono opacity-30 hover:opacity-100 transition-opacity"
   style="color: var(--md-muted);"
   data-turbo="false"
 >
-  ← all decks
+  ← overview
 </a>
+
+<span
+  class="fixed top-4 right-6 text-xs font-mono opacity-30 hover:opacity-80 transition-opacity select-none"
+  style="color: var(--md-muted);"
+  title="Press E to edit this slide"
+>
+  press <kbd style="font-family: var(--md-font-mono); border: 1px solid var(--md-muted); border-radius: 3px; padding: 0 4px; font-size: 10px; opacity: 0.7;">E</kbd> to edit
+</span>
 
 <div
   data-deck-target="overview"
@@ -85,8 +93,9 @@
     <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 font-mono text-xs">
       <dt>→ Space</dt><dd>Next slide</dd>
       <dt>← Backspace</dt><dd>Previous slide</dd>
-      <dt>Home / End</dt><dd>First / last slide</dd>
+      <dt>F / L / Home / End</dt><dd>First / last slide</dd>
       <dt>O</dt><dd>Toggle overview</dd>
+      <dt>E</dt><dd>Edit current slide</dd>
       <dt>P</dt><dd>Peek next slide (corner)</dd>
       <dt>N</dt><dd>Peek speaker notes (corner)</dd>
       <dt>?</dt><dd>Toggle this help</dd>
