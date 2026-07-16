@@ -2,11 +2,12 @@
 
 <div class="overview-page"
      style="background: var(--md-bg); color: var(--md-fg); font-family: var(--md-font-body), system-ui, sans-serif; min-height: 100vh;"
-     data-controller="overview-edit palette"
+     data-controller="overview-edit palette settings"
      data-overview-edit-slug-value="<%= @presentation.slug %>"
      data-overview-edit-create-url-value="<%= presentation_slides_path(@presentation) %>"
      data-overview-edit-reorder-url-value="<%= presentation_slide_order_path(@presentation) %>"
-     data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>">
+     data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>"
+     data-settings-update-url-value="<%= presentation_settings_path(@presentation) %>">
 
   <header class="overview-page__top">
     <a href="<%= presentations_path %>" class="overview-page__crumb" data-turbo="false">← all decks</a>
@@ -15,6 +16,9 @@
       <span class="overview-page__subtitle"><%= pluralize(@presentation.slides.size, "slide") %></span>
     </h1>
     <div class="overview-page__actions">
+      <button type="button" class="editor__btn" data-action="settings#open">
+        Settings
+      </button>
       <a href="<%= presentation_slide_path(@presentation, n: 1) %>"
          class="editor__btn editor__btn--primary"
          data-turbo="false">
@@ -66,4 +70,66 @@
   </footer>
 
   <%= render "slides/palette" %>
+
+  <div class="settings hidden" data-settings-target="root" data-action="click->settings#backdropClick">
+    <div class="settings__panel" data-action="click->settings#stopPropagation">
+      <h3 class="settings__title">Deck settings</h3>
+
+      <div class="settings__field">
+        <span class="settings__label">Theme</span>
+        <div class="settings__radios">
+          <% Presentation::THEMES.each do |theme| %>
+            <label class="settings__radio">
+              <input type="radio" name="theme" value="<%= theme %>" data-settings-target="theme"
+                     <%= "checked" if theme == @presentation.theme %>>
+              <span><%= theme.titleize %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="settings__field">
+        <span class="settings__label">Mode</span>
+        <div class="settings__radios">
+          <% Presentation::MODES.each do |mode| %>
+            <label class="settings__radio">
+              <input type="radio" name="mode" value="<%= mode %>" data-settings-target="mode"
+                     <%= "checked" if mode == @presentation.mode %>>
+              <span><%= mode.titleize %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="settings__field">
+        <span class="settings__label">Colors</span>
+        <div class="settings__colors">
+          <% %w[bg fg accent muted].each do |key| %>
+            <label class="settings__color">
+              <input type="color" data-settings-target="color" data-key="<%= key %>"
+                     value="<%= @presentation.colors[key] %>">
+              <span><%= key %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="settings__field">
+        <span class="settings__label">Fonts</span>
+        <% %w[heading body mono].each do |key| %>
+          <label class="settings__font">
+            <span class="settings__font-label"><%= key %></span>
+            <input type="text" data-settings-target="font" data-key="<%= key %>"
+                   value="<%= @presentation.fonts[key] %>">
+          </label>
+        <% end %>
+      </div>
+
+      <div class="settings__actions">
+        <span class="settings__status" data-settings-target="status"></span>
+        <button type="button" class="editor__btn" data-action="settings#close">Cancel</button>
+        <button type="button" class="editor__btn editor__btn--primary" data-action="settings#save">Save</button>
+      </div>
+    </div>
+  </div>
 </div>

@@ -993,3 +993,118 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   font-family: var(--md-font-mono);
   font-size: 11px;
 }
+
+/* ===== Deck settings modal ===== */
+
+.settings {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklab, #000 55%, transparent);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 4vw;
+}
+.settings__panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow: auto;
+  background: color-mix(in oklab, var(--md-bg) 96%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-muted) 30%, transparent);
+  border-radius: 12px;
+  padding: 1.5rem;
+  font-family: var(--md-font-body);
+  color: var(--md-fg);
+}
+.settings__title {
+  font-family: var(--md-font-heading);
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0 0 1.2rem;
+}
+.settings__field { margin-bottom: 1.1rem; }
+.settings__label {
+  display: block;
+  font-size: 11px;
+  font-family: var(--md-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-muted);
+  margin-bottom: 0.5rem;
+}
+.settings__radios { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.settings__radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings__radio:has(input:checked) {
+  border-color: var(--md-accent);
+  color: var(--md-accent);
+}
+.settings__colors { display: flex; flex-wrap: wrap; gap: 1rem; }
+.settings__color {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 11px;
+  font-family: var(--md-font-mono);
+  color: var(--md-muted);
+  cursor: pointer;
+}
+.settings__color input[type="color"] {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.settings__font {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+.settings__font-label {
+  width: 4.5rem;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--md-muted);
+  text-transform: capitalize;
+}
+.settings__font input[type="text"] {
+  flex: 1;
+  background: color-mix(in oklab, var(--md-fg) 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
+  border-radius: 4px;
+  color: var(--md-fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 0.3rem 0.5rem;
+  outline: none;
+}
+.settings__font input[type="text"]:focus { border-color: var(--md-accent); }
+.settings__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in oklab, var(--md-muted) 20%, transparent);
+}
+.settings__status {
+  flex: 1;
+  font-size: 11px;
+  font-family: var(--md-font-mono);
+  color: var(--md-muted);
+}

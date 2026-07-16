@@ -162,6 +162,32 @@ class Presentation
     @slides = load_slides
   end
 
+  def config_path
+    @dir.join("config.yml")
+  end
+
+  # Persist deck-level settings back to config.yml, preserving any other
+  # keys already there (e.g. title). Mirrors Slide#write!'s tmp+rename.
+  def update_config!(theme:, mode:, fonts:, colors:)
+    raise ArgumentError, "invalid theme" unless THEMES.include?(theme)
+    raise ArgumentError, "invalid mode" unless MODES.include?(mode)
+
+    raw = config_path.exist? ? (YAML.safe_load(config_path.read) || {}) : {}
+    raw["theme"] = theme
+    raw["mode"] = mode
+    raw["fonts"] = fonts
+    raw["colors"] = colors
+
+    tmp = config_path.dirname.join("#{config_path.basename}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}")
+    tmp.write(YAML.dump(raw))
+    tmp.rename(config_path)
+
+    @theme = theme
+    @mode = mode
+    @fonts = DEFAULT_FONTS.merge(fonts)
+    @colors = default_colors_for_mode.merge(colors)
+  end
+
   private
 
   def default_colors_for_mode

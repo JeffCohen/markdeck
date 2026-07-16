@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     resources :slides, only: %i[show edit update create destroy],
               param: :n, constraints: { n: /\d+/ }
     resource  :slide_order, only: :update
+    resource  :settings, only: :update, module: :presentations
     resources :previews, only: :create, module: :presentations
   end
 
