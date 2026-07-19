@@ -10,4 +10,5 @@ colors:
   fg: "#171717"
   accent: "#2563eb"
   muted: "#737373"
-  highlight: "#f2f0c0"
+  highlight: "#bf05cc"
+body_size: large

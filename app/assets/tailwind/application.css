@@ -136,7 +136,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   pointer-events: none;
   max-width: none;
   margin: 0;
-  font-size: 26px;
+  font-size: calc(26px * var(--md-body-scale, 1));
   line-height: 1.45;
 }
 
@@ -146,7 +146,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .thumb-preview .thumb-content pre { font-size: 20px; line-height: 1.5; padding: 0.7em 1em; }
 .thumb-preview .thumb-content pre.mermaid { font-size: 16px; }
 .thumb-preview .thumb-content code { font-size: 22px; }
-.thumb-preview .thumb-content img { max-height: 360px; }
+.thumb-preview .thumb-content img:not(.fill):not(.fill-below) { max-height: 360px; }
 
 .thumb-preview .thumb-content.slide--center {
   display: flex;
@@ -222,7 +222,10 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   align-items: stretch;
   justify-content: flex-start;
   padding: 6vmin 8vmin;
-  font-size: clamp(24px, 3.2vmin, 42px);
+  /* Headings use their own independent rem/vmin clamps (unaffected by this),
+     so --md-body-scale only resizes body copy: paragraphs/lists/inline code
+     inherit this as their font-size with nothing else overriding it. */
+  font-size: calc(clamp(24px, 3.2vmin, 42px) * var(--md-body-scale, 1));
 }
 
 /* Per-slide opt-in: drop `<!-- center -->` anywhere in the .md to vertically
@@ -262,14 +265,10 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .slide-content .fg     { color: var(--md-fg); }
 .slide-content .bg     { color: var(--md-bg); }
 
-/* Tinted background marker — <span class="highlight">…</span>. Scoped to
-   span so it can't collide with <pre class="highlight ..."> — Rouge's
-   wrapper class for syntax-highlighted code blocks. */
-.slide-content span.highlight {
-  background: color-mix(in oklab, var(--md-highlight) 25%, transparent);
-  padding: 0.05em 0.35em;
-  border-radius: 4px;
-}
+/* A second general-purpose text color — <span class="highlight">…</span>.
+   Scoped to span so it can't collide with <pre class="highlight ..."> —
+   Rouge's wrapper class for syntax-highlighted code blocks. */
+.slide-content span.highlight { color: var(--md-highlight); }
 
 /* Multi-column layouts — drop <div class="cols"> in markdown */
 .slide-content .cols {
@@ -443,6 +442,41 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   margin: 0.6em auto;
 }
 
+/* <img class="fill"> — true edge-to-edge, ignoring .slide's own padding
+   and .slide-content's max-width. Needs raw HTML (not ![]()) to carry the
+   class; .slide is the nearest positioned ancestor so inset:0 pins to its
+   full box, padding included. */
+.slide-content img.fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* <img class="fill-below"> — fills whatever vertical space is left after
+   the preceding content (typically a heading), rather than the whole
+   slide. Scoped via :has() so only slides that actually use it switch to
+   flex layout; plain text-flow slides keep their normal block layout. */
+.slide-content:has(> img.fill-below) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.slide-content img.fill-below {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  margin: 0;
+}
+
 /* Mermaid containers — keep them clean */
 .slide-content pre.mermaid {
   background: transparent;
@@ -506,7 +540,13 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .theme-editorial .slide-content h2,
 .theme-editorial .slide-content h3 {
   font-weight: 700;
+  
+}
+.theme-editorial .slide-content h1 {
   border-bottom: solid 2px teal;
+}
+.theme-editorial .slide-content h3 {
+  font-weight: normal;
 }
 .theme-editorial .slide-content blockquote {
   font-size: 1.15em;
@@ -888,7 +928,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   top: 0;
   left: 0;
   padding: 50px 80px;
-  font-size: 26px;
+  font-size: calc(26px * var(--md-body-scale, 1));
   line-height: 1.45;
 }
 .overview-edit__thumb.slide--center {
@@ -901,7 +941,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .overview-edit__thumb h1 { font-size: 76px; line-height: 1.05; margin: 0 0 0.4em; }
 .overview-edit__thumb h2 { font-size: 56px; line-height: 1.1;  margin: 0 0 0.4em; }
 .overview-edit__thumb h3 { font-size: 40px; line-height: 1.2;  margin: 0.4em 0 0.3em; }
-.overview-edit__thumb img { max-height: 360px; }
+.overview-edit__thumb img:not(.fill):not(.fill-below) { max-height: 360px; }
 
 .overview-edit__caption {
   display: flex;

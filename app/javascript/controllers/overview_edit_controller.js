@@ -13,11 +13,33 @@ export default class extends Controller {
     this._dragFromPos = null
     const items = this._items()
     if (items.length) items[0].focus()
+
+    window.addEventListener("resize", this._onResize = () => this._scaleThumbs())
+    this._scaleThumbs()
+  }
+
+  disconnect() {
+    window.removeEventListener("resize", this._onResize)
   }
 
   // Slide tiles plus the trailing "+ new slide" tile, in grid order.
   _items() {
     return this.hasAddTarget ? [...this.tileTargets, this.addTarget] : this.tileTargets
+  }
+
+  // .overview-edit__thumb's CSS default (scale(0.18)) is only a rough
+  // approximation — the grid's columns are responsive, so a tile's actual
+  // width rarely matches what 0.18 assumes. Anchored top-left, any mismatch
+  // shows up as a gap on the bottom/right, invisible on text but obvious on
+  // a full-bleed image. Rescale each tile to its real rendered width, same
+  // trick as the editor preview and next-slide peek.
+  _scaleThumbs() {
+    const VIRTUAL_WIDTH = 1280
+    this.element.querySelectorAll(".overview-edit__thumb-frame").forEach(frame => {
+      const thumb = frame.querySelector(".overview-edit__thumb")
+      const w = frame.clientWidth
+      if (thumb && w > 0) thumb.style.transform = `scale(${w / VIRTUAL_WIDTH})`
+    })
   }
 
   stopPropagation(e) { e.stopPropagation() }

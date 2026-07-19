@@ -4,12 +4,13 @@ module Presentations
       presentation = Presentation.find(params[:presentation_slug])
       return head :not_found unless presentation
 
-      settings = params.require(:settings).permit(:theme, :mode, fonts: %i[heading body mono],
+      settings = params.require(:settings).permit(:theme, :mode, :body_size, fonts: %i[heading body mono],
                                                     colors: %i[bg fg accent muted highlight])
 
       presentation.update_config!(
         theme: settings[:theme],
         mode: settings[:mode],
+        body_size: settings[:body_size].presence || "medium",
         fonts: settings[:fonts].to_h.to_hash,
         colors: settings[:colors].to_h.to_hash
       )

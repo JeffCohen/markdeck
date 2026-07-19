@@ -5,6 +5,8 @@ class Presentation
 
   THEMES = %w[minimal editorial terminal aurora].freeze
   MODES = %w[dark light].freeze
+  BODY_SIZES = %w[small medium large].freeze
+  BODY_SIZE_SCALES = { "small" => "0.85", "medium" => "1", "large" => "1.15" }.freeze
 
   DEFAULT_FONTS = {
     "heading" => "Inter",
@@ -28,7 +30,7 @@ class Presentation
     "highlight" => "#2563eb"
   }.freeze
 
-  attr_reader :slug, :title, :theme, :mode, :fonts, :colors, :slides
+  attr_reader :slug, :title, :theme, :mode, :body_size, :fonts, :colors, :slides
 
   def self.all
     return [] unless ROOT.exist?
@@ -59,6 +61,7 @@ class Presentation
     @title = config["title"].presence || slug.titleize
     @theme = THEMES.include?(config["theme"]) ? config["theme"] : "minimal"
     @mode = MODES.include?(config["mode"]) ? config["mode"] : "dark"
+    @body_size = BODY_SIZES.include?(config["body_size"]) ? config["body_size"] : "medium"
     @fonts = DEFAULT_FONTS.merge(config["fonts"] || {})
     @colors = default_colors_for_mode.merge(config["colors"] || {})
     @slides = load_slides
@@ -85,6 +88,7 @@ class Presentation
       "--md-accent" => colors["accent"],
       "--md-muted" => colors["muted"],
       "--md-highlight" => colors["highlight"],
+      "--md-body-scale" => BODY_SIZE_SCALES.fetch(@body_size),
       "--md-font-heading" => %("#{fonts['heading']}", #{SANS_FALLBACK}),
       "--md-font-body" => %("#{fonts['body']}", #{SANS_FALLBACK}),
       "--md-font-mono" => %("#{fonts['mono']}", #{MONO_FALLBACK})
@@ -174,13 +178,15 @@ class Presentation
 
   # Persist deck-level settings back to config.yml, preserving any other
   # keys already there (e.g. title). Mirrors Slide#write!'s tmp+rename.
-  def update_config!(theme:, mode:, fonts:, colors:)
+  def update_config!(theme:, mode:, fonts:, colors:, body_size: "medium")
     raise ArgumentError, "invalid theme" unless THEMES.include?(theme)
     raise ArgumentError, "invalid mode" unless MODES.include?(mode)
+    raise ArgumentError, "invalid body_size" unless BODY_SIZES.include?(body_size)
 
     raw = config_path.exist? ? (YAML.safe_load(config_path.read) || {}) : {}
     raw["theme"] = theme
     raw["mode"] = mode
+    raw["body_size"] = body_size
     raw["fonts"] = fonts
     raw["colors"] = colors
 
@@ -190,6 +196,7 @@ class Presentation
 
     @theme = theme
     @mode = mode
+    @body_size = body_size
     @fonts = DEFAULT_FONTS.merge(fonts)
     @colors = default_colors_for_mode.merge(colors)
   end

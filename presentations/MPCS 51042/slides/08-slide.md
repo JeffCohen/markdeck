@@ -1,16 +1,11 @@
-# More Essentials
+# Alan Turing
 
+### Notion of "Completeness"
 
-<div class="cols accent pt-8">
+<div class="mt-8">
 
-* Architecture
-* <span class="highlight">Engineering</span>
-* Observability
-* Resource Management
-<!-- col -->
-* Quality Control
-* Deployment
-* Complexity Analysis
-* Metaprogramming
+  1. Sequencing
+  1. Conditional Branching
+  1. Unlimited Memory
 
 </div>

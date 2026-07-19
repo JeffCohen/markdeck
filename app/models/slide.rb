@@ -122,9 +122,24 @@ class Slide
   end
 
   def self.visible_markdown_for(body)
-    body.sub(FRONT_MATTER_PATTERN, "")
-        .gsub(NOTES_PATTERN, "")
-        .gsub(CENTER_PATTERN, "")
+    visible, = extract_notes(body.sub(FRONT_MATTER_PATTERN, ""))
+    visible.gsub(CENTER_PATTERN, "")
+  end
+
+  # Notes can be written two ways:
+  #   <!-- notes some text -->      — wrapped inline in the comment
+  #   <!-- notes -->
+  #   some text                     — marker form: everything after the
+  #                                    (empty) marker, to the end of the
+  #                                    slide, is notes. Matches the <!-- col
+  #                                    --> marker convention, so put it last.
+  # Returns [visible_body, notes_text].
+  def self.extract_notes(body)
+    m = body.match(NOTES_PATTERN) or return [body, ""]
+    wrapped = m[1].strip
+    return [body.sub(NOTES_PATTERN, ""), wrapped] if wrapped.present?
+
+    [body[0...m.begin(0)], body[m.end(0)..].to_s.strip]
   end
 
   def self.centered_from_body?(body)
@@ -154,7 +169,7 @@ class Slide
   end
 
   def raw_notes
-    @raw_notes ||= (m = markdown.match(NOTES_PATTERN)) ? m[1].strip : ""
+    @raw_notes ||= self.class.extract_notes(markdown).last
   end
 
   def front_matter

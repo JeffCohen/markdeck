@@ -2,6 +2,10 @@
 
 * Defined structure
 * Verbs and nouns
-* Built-in abilities
-* User-defined abilities
+* Semantic syntax
+* Boolean logic / conditional branching
+* Scope
+* Namespacing / Modularity
 
+<!-- notes -->
+End with "who's credited with formulating these ideas?"

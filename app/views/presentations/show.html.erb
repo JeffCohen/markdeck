@@ -8,7 +8,8 @@
      data-overview-edit-reorder-url-value="<%= presentation_slide_order_path(@presentation) %>"
      data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>"
      data-settings-update-url-value="<%= presentation_settings_path(@presentation) %>"
-     data-settings-default-colors-value="<%= { dark: Presentation::DEFAULT_COLORS_DARK, light: Presentation::DEFAULT_COLORS_LIGHT }.to_json %>">
+     data-settings-default-colors-value="<%= { dark: Presentation::DEFAULT_COLORS_DARK, light: Presentation::DEFAULT_COLORS_LIGHT }.to_json %>"
+     data-settings-body-size-scales-value="<%= Presentation::BODY_SIZE_SCALES.to_json %>">
 
   <header class="overview-page__top">
     <a href="<%= presentations_path %>" class="overview-page__crumb" data-turbo="false">← all decks</a>
@@ -85,8 +86,8 @@
             <h2>Sample heading</h2>
             <p>
               Body copy in <span class="accent">accent</span>, <span class="muted">muted</span>,
-              and <span class="fg">fg</span>, plus a <span class="highlight">highlight</span> marker
-              and a <span class="settings__swatch"></span> bg swatch.
+              <span class="fg">fg</span>, and <span class="highlight">highlight</span>,
+              plus a <span class="settings__swatch"></span> bg swatch.
             </p>
             <pre><code>const mono = "sample";</code></pre>
           </div>
@@ -145,6 +146,20 @@
                    value="<%= @presentation.fonts[key] %>">
           </label>
         <% end %>
+      </div>
+
+      <div class="settings__field">
+        <span class="settings__label">Body size</span>
+        <div class="settings__radios">
+          <% Presentation::BODY_SIZES.each do |size| %>
+            <label class="settings__radio">
+              <input type="radio" name="body_size" value="<%= size %>" data-settings-target="bodySize"
+                     data-action="change->settings#syncPreview"
+                     <%= "checked" if size == @presentation.body_size %>>
+              <span><%= size.titleize %></span>
+            </label>
+          <% end %>
+        </div>
       </div>
 
       <div class="settings__actions">

@@ -2,8 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 
 // Deck settings modal: theme/mode/colors/fonts, writes straight to config.yml.
 export default class extends Controller {
-  static targets = ["root", "theme", "mode", "color", "font", "status", "previewFrame"]
-  static values  = { updateUrl: String, defaultColors: Object }
+  static targets = ["root", "theme", "mode", "bodySize", "color", "font", "status", "previewFrame"]
+  static values  = { updateUrl: String, defaultColors: Object, bodySizeScales: Object }
 
   connect() {
     document.addEventListener("keydown", this._onKey = (e) => this._handleKey(e))
@@ -59,6 +59,9 @@ export default class extends Controller {
     el.className = `thumb-preview theme-${theme} mode-${mode}`
     this.colorTargets.forEach(t => el.style.setProperty(`--md-${t.dataset.key}`, t.value))
     this.fontTargets.forEach(t => el.style.setProperty(`--md-font-${t.dataset.key}`, t.value))
+
+    const bodySize = this.bodySizeTargets.find(t => t.checked)?.value
+    el.style.setProperty("--md-body-scale", this.bodySizeScalesValue[bodySize] || "1")
   }
 
   // Same fixed-1280x720-scaled-to-fit trick used by the editor preview and
@@ -73,6 +76,7 @@ export default class extends Controller {
   async save() {
     const theme = this.themeTargets.find(t => t.checked)?.value
     const mode  = this.modeTargets.find(t => t.checked)?.value
+    const bodySize = this.bodySizeTargets.find(t => t.checked)?.value
     const colors = {}
     this.colorTargets.forEach(t => { colors[t.dataset.key] = t.value })
     const fonts = {}
@@ -87,7 +91,7 @@ export default class extends Controller {
           "Accept":       "application/json",
           "X-CSRF-Token": csrfToken(),
         },
-        body: JSON.stringify({ settings: { theme, mode, colors, fonts } }),
+        body: JSON.stringify({ settings: { theme, mode, body_size: bodySize, colors, fonts } }),
       })
       if (!res.ok) throw new Error(`settings HTTP ${res.status}`)
       window.location.reload()
