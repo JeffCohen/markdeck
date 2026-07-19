@@ -52,8 +52,37 @@ class MarkdownRenderer
     end
 
     rewrite_image_urls(fragment) if @image_base
+    split_columns(fragment)
 
     fragment.to_html
+  end
+
+  COLUMN_BREAK = /\A\s*col\s*\z/
+
+  # `<div class="cols">`/`cols-3` containers can either be hand-split into
+  # nested <div> columns, or (simpler) hold flat content with `<!-- col -->`
+  # marking each break. Only the latter needs rewriting: split the flat
+  # children into groups at each marker and wrap each group in a <div>.
+  def split_columns(fragment)
+    fragment.css(".cols, .cols-3").each do |container|
+      groups = [[]]
+      container.children.each do |node|
+        if node.comment? && node.text =~ COLUMN_BREAK
+          groups << []
+        else
+          groups.last << node
+        end
+      end
+      groups.reject! { |g| g.all? { |n| n.text? && n.text.strip.empty? } }
+      next if groups.size <= 1
+
+      container.children.remove
+      groups.each do |group|
+        column = Nokogiri::XML::Node.new("div", fragment.document)
+        group.each { |node| column.add_child(node) }
+        container.add_child(column)
+      end
+    end
   end
 
   def rewrite_image_urls(fragment)

@@ -46,43 +46,6 @@
 </span>
 
 <div
-  data-deck-target="overview"
-  class="hidden fixed inset-0 z-40 overflow-auto p-8"
-  style="background: var(--md-bg);"
->
-  <div class="max-w-6xl mx-auto">
-    <h2 class="text-2xl mb-6" style="font-family: var(--md-font-heading);"><%= presentation.title %></h2>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <% presentation.slides.each do |slide| %>
-        <button
-          type="button"
-          class="text-left hover:opacity-100 opacity-80 transition-opacity"
-          data-action="click->deck#jumpTo"
-          data-deck-index-param="<%= slide.index %>"
-        >
-          <div class="thumb-preview" style="border: 1px solid var(--md-muted);">
-            <div class="thumb-content slide-content">
-              <%== slide.html %>
-            </div>
-          </div>
-          <div class="flex items-baseline gap-2 mt-2">
-            <span class="text-[10px] font-mono" style="color: var(--md-muted);">
-              <%= slide.number %>
-            </span>
-            <span class="text-xs truncate flex-1" style="font-family: var(--md-font-heading);">
-              <%= slide.title %>
-            </span>
-          </div>
-        </button>
-      <% end %>
-    </div>
-    <p class="text-xs mt-8 font-mono" style="color: var(--md-muted);">
-      Arrow keys to navigate &middot; <kbd>Enter</kbd> to jump &middot; <kbd>Esc</kbd> or <kbd>O</kbd> to close
-    </p>
-  </div>
-</div>
-
-<div
   data-deck-target="help"
   class="hidden fixed inset-0 z-50 flex items-center justify-center"
   style="background: rgba(0,0,0,0.85);"
@@ -94,7 +57,7 @@
       <dt>→ Space</dt><dd>Next slide</dd>
       <dt>← Backspace</dt><dd>Previous slide</dd>
       <dt>F / L / Home / End</dt><dd>First / last slide</dd>
-      <dt>O</dt><dd>Toggle overview</dd>
+      <dt>O</dt><dd>Slide overview</dd>
       <dt>E</dt><dd>Edit current slide</dd>
       <dt>P</dt><dd>Peek next slide (corner)</dd>
       <dt>N</dt><dd>Peek speaker notes (corner)</dd>
@@ -102,9 +65,6 @@
       <dt>Esc</dt><dd>Close any overlay</dd>
     </dl>
     <p class="text-xs mt-4" style="color: var(--md-muted);">
-      In overview: arrow keys move between thumbnails, Enter jumps to the focused slide.
-    </p>
-    <p class="text-xs mt-2" style="color: var(--md-muted);">
       Export PDF: <kbd>⌘P</kbd> &rarr; "Save as PDF" &middot; one slide per page, landscape.
     </p>
     <p class="text-xs mt-6" style="color: var(--md-muted);">Click anywhere to close</p>

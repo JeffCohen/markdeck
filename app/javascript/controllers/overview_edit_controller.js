@@ -1,9 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Overview in edit mode: drag-to-reorder, +Add tile, per-tile delete.
-// Opens with the "O" key (when not in a text input).
+// Deck landing page grid: drag-to-reorder, +Add tile, per-tile delete.
 export default class extends Controller {
-  static targets = ["root", "tile"]
+  static targets = ["tile", "add"]
   static values  = {
     slug:       String,
     createUrl:  String,
@@ -12,48 +11,62 @@ export default class extends Controller {
 
   connect() {
     this._dragFromPos = null
-    document.addEventListener("keydown", this._onKey = (e) => this._handleKey(e))
+    const items = this._items()
+    if (items.length) items[0].focus()
   }
 
-  disconnect() {
-    document.removeEventListener("keydown", this._onKey)
+  // Slide tiles plus the trailing "+ new slide" tile, in grid order.
+  _items() {
+    return this.hasAddTarget ? [...this.tileTargets, this.addTarget] : this.tileTargets
   }
 
-  _handleKey(e) {
-    if (e.metaKey || e.ctrlKey || e.altKey) return
-    const t = e.target
-    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return
-    if (e.key === "o" || e.key === "O") {
-      e.preventDefault()
-      this.toggle()
-    } else if (e.key === "Escape" && this._isOpen()) {
-      e.preventDefault()
-      this.close()
-    }
-  }
-
-  _isOpen() { return !this.rootTarget.classList.contains("hidden") }
-
-  toggle() { this._isOpen() ? this.close() : this.open() }
-
-  open()  { this.rootTarget.classList.remove("hidden") }
-  close() { this.rootTarget.classList.add("hidden") }
-
-  backdropClick() { this.close() }
   stopPropagation(e) { e.stopPropagation() }
 
-  // Tile click on the in-editor Overview MODAL → jump to that slide's editor.
-  openSlide(e) {
-    if (e.target.closest(".overview-edit__delete, .overview-edit__edit-pill")) return
-    const pos = e.currentTarget.dataset.position
-    window.location = `/presentations/${this.slugValue}/slides/${pos}/edit`
-  }
-
-  // Tile click on the Overview LANDING PAGE → enter present mode at that slide.
+  // Tile click → enter present mode at that slide.
   presentSlide(e) {
     if (e.target.closest(".overview-edit__delete, .overview-edit__edit-pill")) return
     const pos = e.currentTarget.dataset.position
     window.location = `/presentations/${this.slugValue}/slides/${pos}`
+  }
+
+  // Arrow keys move focus between tiles in the grid; Enter/Space activates
+  // the focused tile (same as clicking it).
+  handleKey(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+    const items = this._items()
+    if (!items.length) return
+    const current = items.indexOf(document.activeElement)
+
+    if (e.key === "Enter" || e.key === " ") {
+      if (current === -1) return
+      e.preventDefault()
+      items[current].click()
+      return
+    }
+
+    const cols = this._columns(items)
+    const from = current === -1 ? 0 : current
+    let next = from
+
+    switch (e.key) {
+      case "ArrowRight": next = Math.min(items.length - 1, from + 1); break
+      case "ArrowLeft": next = Math.max(0, from - 1); break
+      case "ArrowDown": next = Math.min(items.length - 1, from + cols); break
+      case "ArrowUp": next = Math.max(0, from - cols); break
+      case "Home": next = 0; break
+      case "End": next = items.length - 1; break
+      default: return
+    }
+
+    e.preventDefault()
+    items[next].focus()
+  }
+
+  _columns(items) {
+    if (items.length < 2) return 1
+    const firstTop = items[0].offsetTop
+    const nextRow = items.findIndex(t => t.offsetTop !== firstTop)
+    return nextRow === -1 ? items.length : nextRow
   }
 
   // ---- drag-reorder ---------------------------------------------------------

@@ -7,6 +7,8 @@
      data-editor-preview-url-value="<%= presentation_previews_path(@presentation) %>"
      data-editor-save-url-value="<%= presentation_slide_path(@presentation, n: @slide.position) %>"
      data-editor-done-url-value="<%= presentation_slide_path(@presentation, n: @slide.position) %>"
+     data-editor-create-url-value="<%= presentation_slides_path(@presentation) %>"
+     data-editor-position-value="<%= @slide.position %>"
      data-editor-etag-value="<%= @slide.etag %>"
      data-editor-csrf-value="<%= form_authenticity_token %>"
      data-palette-slides-value="<%= slides_palette_json(@presentation, target: :edit).to_json %>">
@@ -38,6 +40,14 @@
         Jump
         <kbd>⌘K</kbd>
       </button>
+      <button type="button" data-action="editor#newSlideAfter" class="editor__btn" title="Save & create next slide (⌘⏎)">
+        + Slide
+        <kbd>⌘⏎</kbd>
+      </button>
+      <button type="button" data-action="editor#duplicateSlide" class="editor__btn" title="Duplicate this slide (⌘D)">
+        Duplicate
+        <kbd>⌘D</kbd>
+      </button>
       <a href="<%= presentation_slide_path(@presentation, n: @slide.position) %>"
          data-turbo="false"
          class="editor__btn editor__btn--primary"
@@ -56,13 +66,13 @@
                 data-action="input->editor#onInput"
                 spellcheck="false"
                 autocomplete="off"
-                wrap="off"><%= @slide.markdown %></textarea>
+                wrap="soft"><%= @slide.markdown %></textarea>
     </section>
 
     <section class="editor__pane editor__pane--preview">
-      <div class="slide<%= ' slide--center' if @slide.centered? %>"
-           data-editor-target="previewSlide">
-        <div class="slide-content" data-editor-target="preview">
+      <div class="thumb-preview">
+        <div class="thumb-content slide-content<%= ' slide--center' if @slide.centered? %>"
+             data-editor-target="previewSlide preview">
           <%== @slide.html %>
         </div>
       </div>

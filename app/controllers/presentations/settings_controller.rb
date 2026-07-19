@@ -5,7 +5,7 @@ module Presentations
       return head :not_found unless presentation
 
       settings = params.require(:settings).permit(:theme, :mode, fonts: %i[heading body mono],
-                                                    colors: %i[bg fg accent muted])
+                                                    colors: %i[bg fg accent muted highlight])
 
       presentation.update_config!(
         theme: settings[:theme],

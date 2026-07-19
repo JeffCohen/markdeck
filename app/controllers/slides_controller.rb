@@ -25,7 +25,8 @@ class SlidesController < ApplicationController
 
   def create
     after = params[:after].presence&.to_i
-    new_slide = @presentation.create_slide!(after_position: after)
+    body  = params[:body].presence
+    new_slide = @presentation.create_slide!(after_position: after, body: body)
     redirect_to edit_presentation_slide_path(@presentation, n: new_slide.position), status: :see_other
   end
 

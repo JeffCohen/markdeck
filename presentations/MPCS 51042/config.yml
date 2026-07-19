@@ -1,0 +1,13 @@
+---
+theme: editorial
+mode: light
+fonts:
+  heading: Inter
+  body: Inter
+  mono: JetBrains Mono
+colors:
+  bg: "#fafafa"
+  fg: "#171717"
+  accent: "#2563eb"
+  muted: "#737373"
+  highlight: "#f2f0c0"

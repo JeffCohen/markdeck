@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["slide", "counter", "overview", "help", "progress", "notesDot"]
+  static targets = ["slide", "counter", "help", "progress", "notesDot"]
   static values = { count: Number, index: Number, slug: String, start: Number }
 
   connect() {
@@ -13,7 +13,7 @@ export default class extends Controller {
       const idx = this.readHash()
       if (idx !== this.indexValue) this.show(idx)
     }
-    this.resizeHandler = () => { if (this.isOverviewOpen()) this.scaleThumbs() }
+    this.resizeHandler = () => { if (document.body.classList.contains("peek-preview")) this.scaleThumbs() }
     window.addEventListener("keydown", this.keyHandler)
     window.addEventListener("hashchange", this.hashHandler)
     window.addEventListener("resize", this.resizeHandler)
@@ -79,23 +79,9 @@ export default class extends Controller {
   first() { this.show(0) }
   last() { this.show(this.countValue - 1) }
 
-  jumpTo(event) {
-    const idx = parseInt(event.params.index, 10)
-    this.toggleOverview(true)
-    this.show(idx)
-  }
-
-  toggleOverview(forceClose) {
-    if (!this.hasOverviewTarget) return
-    const isHidden = this.overviewTarget.classList.contains("hidden")
-    if (forceClose === true || !isHidden) {
-      this.overviewTarget.classList.add("hidden")
-    } else {
-      this.overviewTarget.classList.remove("hidden")
-      if (this.hasHelpTarget) this.helpTarget.classList.add("hidden")
-      this.scaleThumbs()
-      this.focusOverviewButton(this.indexValue)
-    }
+  goToOverview() {
+    if (!this.hasSlugValue) return
+    window.location = `/presentations/${this.slugValue}`
   }
 
   scaleThumbs() {
@@ -119,57 +105,6 @@ export default class extends Controller {
     }
   }
 
-  isOverviewOpen() {
-    return this.hasOverviewTarget && !this.overviewTarget.classList.contains("hidden")
-  }
-
-  overviewButtons() {
-    return Array.from(this.overviewTarget.querySelectorAll("button[data-deck-index-param]"))
-  }
-
-  focusOverviewButton(idx) {
-    const buttons = this.overviewButtons()
-    const target = buttons[Math.max(0, Math.min(buttons.length - 1, idx))]
-    if (target) target.focus()
-  }
-
-  overviewColumns(buttons) {
-    if (buttons.length < 2) return 1
-    const firstTop = buttons[0].offsetTop
-    const nextRow = buttons.findIndex(b => b.offsetTop !== firstTop)
-    return nextRow === -1 ? buttons.length : nextRow
-  }
-
-  handleOverviewKey(event) {
-    const buttons = this.overviewButtons()
-    if (!buttons.length) return
-    const cols = this.overviewColumns(buttons)
-    const focused = buttons.indexOf(document.activeElement)
-    const current = focused === -1 ? 0 : focused
-    let next = current
-
-    switch (event.key) {
-      case "ArrowRight":
-        next = Math.min(buttons.length - 1, current + 1); break
-      case "ArrowLeft":
-        next = Math.max(0, current - 1); break
-      case "ArrowDown":
-        next = Math.min(buttons.length - 1, current + cols); break
-      case "ArrowUp":
-        next = Math.max(0, current - cols); break
-      case "Home":
-        next = 0; break
-      case "End":
-        next = buttons.length - 1; break
-      default:
-        return false
-    }
-
-    event.preventDefault()
-    buttons[next].focus()
-    return true
-  }
-
   toggleHelp(forceClose) {
     if (!this.hasHelpTarget) return
     const isHidden = this.helpTarget.classList.contains("hidden")
@@ -177,7 +112,6 @@ export default class extends Controller {
       this.helpTarget.classList.add("hidden")
     } else {
       this.helpTarget.classList.remove("hidden")
-      if (this.hasOverviewTarget) this.overviewTarget.classList.add("hidden")
     }
   }
 
@@ -185,16 +119,6 @@ export default class extends Controller {
     if (event.metaKey || event.ctrlKey || event.altKey) return
     const tag = (event.target.tagName || "").toUpperCase()
     if (tag === "INPUT" || tag === "TEXTAREA") return
-
-    if (this.isOverviewOpen()) {
-      if (this.handleOverviewKey(event)) return
-      if (event.key === "Escape" || event.key === "o" || event.key === "O") {
-        this.toggleOverview(true)
-        event.preventDefault()
-        return
-      }
-      return
-    }
 
     switch (event.key) {
       case "ArrowRight":
@@ -217,7 +141,7 @@ export default class extends Controller {
         this.last(); event.preventDefault(); break
       case "o":
       case "O":
-        this.toggleOverview(); event.preventDefault(); break
+        this.goToOverview(); event.preventDefault(); break
       case "p":
       case "P":
         this.togglePeek("preview"); event.preventDefault(); break
@@ -230,7 +154,6 @@ export default class extends Controller {
       case "E":
         this.editCurrent(); event.preventDefault(); break
       case "Escape":
-        this.toggleOverview(true)
         this.toggleHelp(true)
         document.body.classList.remove("peek-notes", "peek-preview")
         break

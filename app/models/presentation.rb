@@ -16,14 +16,16 @@ class Presentation
     "bg" => "#0a0a0a",
     "fg" => "#e5e5e5",
     "accent" => "#60a5fa",
-    "muted" => "#737373"
+    "muted" => "#737373",
+    "highlight" => "#60a5fa"
   }.freeze
 
   DEFAULT_COLORS_LIGHT = {
     "bg" => "#fafafa",
     "fg" => "#171717",
     "accent" => "#2563eb",
-    "muted" => "#737373"
+    "muted" => "#737373",
+    "highlight" => "#2563eb"
   }.freeze
 
   attr_reader :slug, :title, :theme, :mode, :fonts, :colors, :slides
@@ -82,6 +84,7 @@ class Presentation
       "--md-fg" => colors["fg"],
       "--md-accent" => colors["accent"],
       "--md-muted" => colors["muted"],
+      "--md-highlight" => colors["highlight"],
       "--md-font-heading" => %("#{fonts['heading']}", #{SANS_FALLBACK}),
       "--md-font-body" => %("#{fonts['body']}", #{SANS_FALLBACK}),
       "--md-font-mono" => %("#{fonts['mono']}", #{MONO_FALLBACK})
@@ -107,13 +110,15 @@ class Presentation
 
   # Create a new slide file after `after_position` (1-based; nil = end of deck).
   # Returns the new Slide object.
-  def create_slide!(after_position: nil)
+  def create_slide!(after_position: nil, body: nil)
     prefix = next_slide_prefix
     path = slides_dir.join("#{prefix}-slide.md")
-    path.binwrite("# New slide\n")
+    path.binwrite(body || "# New slide\n")
 
     # If inserting in the middle, run a reorder so the new slide actually
-    # lands at the requested visual position.
+    # lands at the requested visual position. The reorder renames the file
+    # (it's no longer at `path`), so grab the result by the position we
+    # placed it at rather than re-matching on `prefix`.
     if after_position
       reload_slides!
       target_pos = [[after_position, 0].max, slides.size - 1].min + 1
@@ -122,6 +127,7 @@ class Presentation
       order.delete(current_pos_of_new)
       order.insert(target_pos - 1, current_pos_of_new)
       reorder!(order)
+      return slides[target_pos - 1]
     end
 
     reload_slides!

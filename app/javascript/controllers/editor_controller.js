@@ -8,16 +8,20 @@ export default class extends Controller {
     previewUrl: String,
     saveUrl:    String,
     doneUrl:    String,
+    createUrl:  String,
+    position:   Number,
     csrf:       String,
     etag:       String,
   }
 
   PREVIEW_DEBOUNCE_MS = 200
   SAVE_DEBOUNCE_MS    = 800
+  RELOAD_IDLE_MS      = 3000
 
   connect() {
     this._previewTimer = null
     this._saveTimer    = null
+    this._reloadTimer  = null
     this._previewInflight = false
     this._previewDirty    = false
     this._saveInflight    = false
@@ -25,15 +29,26 @@ export default class extends Controller {
     this._currentEtag     = this.etagValue
 
     document.addEventListener("keydown", this._onKey = (e) => this._handleKey(e))
+    window.addEventListener("resize", this._onResize = () => this._scalePreview())
+    this._scalePreview()
+
+    // Arriving here via the "E" shortcut (or any nav) should drop the
+    // cursor straight into the markdown, not leave focus invisible on body.
+    this.textareaTarget.focus()
+    const end = this.textareaTarget.value.length
+    this.textareaTarget.setSelectionRange(end, end)
   }
 
   disconnect() {
     document.removeEventListener("keydown", this._onKey)
+    window.removeEventListener("resize", this._onResize)
+    clearTimeout(this._reloadTimer)
   }
 
   // Called on textarea input AND from synthetic events after attribute toggles.
   onInput() {
     this._setStatus("Editing…", "dirty")
+    clearTimeout(this._reloadTimer)
     this._schedulePreview()
     this._scheduleSave()
   }
@@ -93,6 +108,17 @@ export default class extends Controller {
     }
   }
 
+  // The preview renders at a fixed virtual 1280x720 (matching the print/PDF
+  // export size and the overview thumbnails) and gets scaled down to fit
+  // the actual pane width — same trick as scaleThumbs() in deck_controller.
+  _scalePreview() {
+    if (!this.hasPreviewSlideTarget) return
+    const VIRTUAL_WIDTH = 1280
+    const wrap = this.previewSlideTarget.parentElement
+    const w = wrap.clientWidth
+    if (w > 0) this.previewSlideTarget.style.transform = `scale(${w / VIRTUAL_WIDTH})`
+  }
+
   _runMermaid() {
     if (!window.mermaid) return
     const nodes = this.previewTarget.querySelectorAll("pre.mermaid:not([data-processed])")
@@ -111,7 +137,7 @@ export default class extends Controller {
   // Cmd/Ctrl+S → flush immediately
   flush() {
     clearTimeout(this._saveTimer)
-    this._save()
+    return this._save()
   }
 
   async _save() {
@@ -140,6 +166,7 @@ export default class extends Controller {
       this._currentEtag = data.etag
       const now = new Date()
       this._setStatus(`Saved · ${now.toLocaleTimeString()}`, "ok")
+      this._scheduleReload()
     } catch (err) {
       console.warn("save failed:", err)
       this._setStatus("Save failed — will retry", "error")
@@ -149,6 +176,51 @@ export default class extends Controller {
         this._saveDirty = false
         this._scheduleSave()
       }
+    }
+  }
+
+  // Reload the page RELOAD_IDLE_MS after a save, so newly-added CSS (e.g. a
+  // Tailwind class typed into slide markdown) shows up without an explicit
+  // Esc-to-overview round trip. Cancelled by onInput so it never yanks the
+  // textarea out from under an actively-typing user.
+  _scheduleReload() {
+    clearTimeout(this._reloadTimer)
+    this._reloadTimer = setTimeout(() => window.location.reload(), this.RELOAD_IDLE_MS)
+  }
+
+  // ---- new slide / duplicate -------------------------------------------------
+
+  // Save this slide, insert a blank slide right after it, and jump into editing that.
+  async newSlideAfter() {
+    await this.flush()
+    await this._createSlide({ after: this.positionValue })
+  }
+
+  // Save this slide, insert a copy of it right after, and jump into editing the copy.
+  async duplicateSlide() {
+    const body = this.textareaTarget.value
+    await this.flush()
+    await this._createSlide({ after: this.positionValue, body })
+  }
+
+  async _createSlide(payload) {
+    if (!this.hasCreateUrlValue) return
+    try {
+      const res = await fetch(this.createUrlValue, {
+        method:  "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept":       "text/html",
+          "X-CSRF-Token": this.csrfValue,
+        },
+        body: JSON.stringify(payload),
+        redirect: "follow",
+      })
+      if (!res.ok && res.status !== 200 && res.status !== 303) throw new Error(`create HTTP ${res.status}`)
+      window.location = res.url
+    } catch (err) {
+      console.warn("create failed:", err)
+      alert("Create failed — see console.")
     }
   }
 
@@ -169,6 +241,20 @@ export default class extends Controller {
     if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
       e.preventDefault()
       this.flush()
+      return
+    }
+
+    // Cmd/Ctrl+Enter → save & create the next slide, then edit it
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault()
+      this.newSlideAfter()
+      return
+    }
+
+    // Cmd/Ctrl+D → duplicate this slide, then edit the copy
+    if ((e.metaKey || e.ctrlKey) && (e.key === "d" || e.key === "D")) {
+      e.preventDefault()
+      this.duplicateSlide()
       return
     }
 

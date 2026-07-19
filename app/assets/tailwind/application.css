@@ -4,6 +4,18 @@
 @source "../../views/themes";
 @source "../../../presentations/**/*.md";
 
+/* Fixed app-chrome palette, deliberately independent of any deck's own
+   theme/mode. Present mode (deck.html.erb) and the embedded slide
+   thumbnails/previews use the deck's --md-* variables; everything else —
+   editor UI, overview grid page, palette, settings modal — stays on this
+   fixed dark palette no matter what mode the open deck is set to. */
+:root {
+  --app-bg: #0a0a0a;
+  --app-fg: #e5e5e5;
+  --app-accent: #60a5fa;
+  --app-muted: #737373;
+}
+
 /* ===== Slide deck core ===== */
 
 .deck > .slide {
@@ -19,11 +31,10 @@
   transition: stroke-dashoffset 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Overview thumbnails — visible focus ring for keyboard navigation */
-[data-deck-target="overview"] button:focus-visible {
+/* Overview grid tiles — visible focus ring for keyboard navigation */
+.overview-edit__tile:focus-visible {
   outline: 2px solid var(--md-accent);
   outline-offset: 2px;
-  opacity: 1;
 }
 
 /* Speaker peek — corner notes / next-slide preview, toggled by N/P */
@@ -137,6 +148,14 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .thumb-preview .thumb-content code { font-size: 22px; }
 .thumb-preview .thumb-content img { max-height: 360px; }
 
+.thumb-preview .thumb-content.slide--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 /* ============================================================
    Print → PDF: Cmd+P → Save as PDF
    ============================================================ */
@@ -218,12 +237,23 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   margin: auto;
 }
 
+/* Slide prose, syntax highlighting, and per-theme slide-content overrides
+   live in the `components` layer (below Tailwind's `utilities` layer) so a
+   Tailwind class added to slide markdown — e.g. <div class="cols mt-8"> —
+   always wins over these defaults, per normal Tailwind layering rules. */
+@layer components {
+
 /* ===== Slide prose (shared) ===== */
 
 .slide-content {
   width: 100%;
   max-width: 90ch;
   margin: 0 auto;
+  /* Own color explicitly rather than inheriting it — this renders inside
+     app-chrome containers (overview tiles, editor preview) whose own text
+     color is intentionally NOT tied to the deck's mode, so relying on
+     inheritance would show the wrong (app, not deck) foreground color. */
+  color: var(--md-fg);
 }
 
 /* Palette text colors — use as <span class="accent">…</span> etc. */
@@ -231,6 +261,15 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .slide-content .muted  { color: var(--md-muted); }
 .slide-content .fg     { color: var(--md-fg); }
 .slide-content .bg     { color: var(--md-bg); }
+
+/* Tinted background marker — <span class="highlight">…</span>. Scoped to
+   span so it can't collide with <pre class="highlight ..."> — Rouge's
+   wrapper class for syntax-highlighted code blocks. */
+.slide-content span.highlight {
+  background: color-mix(in oklab, var(--md-highlight) 25%, transparent);
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+}
 
 /* Multi-column layouts — drop <div class="cols"> in markdown */
 .slide-content .cols {
@@ -467,15 +506,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .theme-editorial .slide-content h2,
 .theme-editorial .slide-content h3 {
   font-weight: 700;
-  letter-spacing: -0.025em;
-}
-.theme-editorial .slide-content h1::after {
-  content: "";
-  display: block;
-  width: 3rem;
-  height: 3px;
-  background: var(--md-accent);
-  margin-top: 0.4em;
+  border-bottom: solid 2px teal;
 }
 .theme-editorial .slide-content blockquote {
   font-size: 1.15em;
@@ -543,6 +574,8 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   color: transparent;
 }
 
+} /* end @layer components (slide-content defaults) */
+
 /* ===== Editor ===== */
 
 .hidden { display: none !important; }
@@ -559,15 +592,15 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   align-items: center;
   gap: 1rem;
   padding: 0.6rem 1rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
-  background: color-mix(in oklab, var(--md-bg) 80%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
+  background: color-mix(in oklab, var(--app-bg) 80%, transparent);
   font-family: var(--md-font-body);
   font-size: 13px;
 }
 
 .editor__topbar-left { display: flex; align-items: baseline; gap: 0.75rem; flex: 1; min-width: 0; }
-.editor__crumb { color: var(--md-muted); text-decoration: none; }
-.editor__crumb:hover { color: var(--md-fg); }
+.editor__crumb { color: var(--app-muted); text-decoration: none; }
+.editor__crumb:hover { color: var(--app-fg); }
 .editor__deck-title {
   font-family: var(--md-font-heading);
   font-weight: 600;
@@ -578,14 +611,14 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   text-overflow: ellipsis;
 }
 
-.editor__slidenav { display: flex; align-items: center; gap: 0.5rem; color: var(--md-muted); }
+.editor__slidenav { display: flex; align-items: center; gap: 0.5rem; color: var(--app-muted); }
 .editor__slidenav a {
-  color: var(--md-fg);
+  color: var(--app-fg);
   text-decoration: none;
   padding: 0 0.4rem;
   border-radius: 4px;
 }
-.editor__slidenav a:hover { background: color-mix(in oklab, var(--md-fg) 8%, transparent); }
+.editor__slidenav a:hover { background: color-mix(in oklab, var(--app-fg) 8%, transparent); }
 .editor__slidenav-disabled { opacity: 0.3; padding: 0 0.4rem; }
 .editor__slidenav-counter { font-family: var(--md-font-mono); font-size: 12px; }
 
@@ -595,25 +628,25 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.65rem;
-  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 35%, transparent);
   border-radius: 6px;
   background: transparent;
-  color: var(--md-fg);
+  color: var(--app-fg);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
   text-decoration: none;
 }
-.editor__btn:hover { background: color-mix(in oklab, var(--md-fg) 6%, transparent); }
+.editor__btn:hover { background: color-mix(in oklab, var(--app-fg) 6%, transparent); }
 .editor__btn--primary {
-  border-color: var(--md-accent);
-  color: var(--md-accent);
+  border-color: var(--app-accent);
+  color: var(--app-accent);
 }
 .editor__btn kbd {
   font-family: var(--md-font-mono);
   font-size: 10px;
   padding: 1px 4px;
-  border: 1px solid color-mix(in oklab, var(--md-muted) 40%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 40%, transparent);
   border-radius: 3px;
   opacity: 0.8;
 }
@@ -621,12 +654,12 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .editor__status {
   font-family: var(--md-font-mono);
   font-size: 11px;
-  color: var(--md-muted);
+  color: var(--app-muted);
   margin-left: 0.5rem;
   min-width: 6rem;
   text-align: right;
 }
-.editor__status[data-state="dirty"] { color: var(--md-accent); }
+.editor__status[data-state="dirty"] { color: var(--app-accent); }
 .editor__status[data-state="error"] { color: #ef4444; }
 
 /* Attribute strip */
@@ -635,8 +668,8 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   align-items: center;
   gap: 1rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--md-muted) 20%, transparent);
-  background: color-mix(in oklab, var(--md-bg) 92%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--app-muted) 20%, transparent);
+  background: color-mix(in oklab, var(--app-bg) 92%, transparent);
   font-family: var(--md-font-body);
   font-size: 12px;
 }
@@ -644,23 +677,23 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--md-fg);
+  color: var(--app-fg);
 }
 .editor__attr input[type="text"] {
-  background: color-mix(in oklab, var(--md-fg) 6%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
+  background: color-mix(in oklab, var(--app-fg) 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
   border-radius: 4px;
-  color: var(--md-fg);
+  color: var(--app-fg);
   font: inherit;
   padding: 0.2rem 0.5rem;
   min-width: 12rem;
   outline: none;
 }
 .editor__attr input[type="text"]:focus {
-  border-color: var(--md-accent);
+  border-color: var(--app-accent);
 }
-.editor__attr-label { color: var(--md-muted); }
-.editor__attrs-hint { margin-left: auto; color: var(--md-muted); font-size: 11px; }
+.editor__attr-label { color: var(--app-muted); }
+.editor__attrs-hint { margin-left: auto; color: var(--app-muted); font-size: 11px; }
 
 /* Editor panes */
 .editor__panes {
@@ -676,7 +709,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .editor__pane--source {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
+  border-right: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
 }
 .editor__pane--source > .editor__attrs { flex: 0 0 auto; border-top: 0; }
 .editor__pane--source textarea {
@@ -685,26 +718,33 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   font-family: var(--md-font-mono);
   font-size: 14px;
   line-height: 1.55;
-  background: var(--md-bg);
-  color: var(--md-fg);
+  background: var(--app-bg);
+  color: var(--app-fg);
   border: 0;
   outline: none;
   padding: 1rem 1.25rem;
   resize: none;
   tab-size: 2;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .editor__pane--preview {
   display: flex;
-  align-items: stretch;
-  background: var(--md-bg);
+  align-items: center;
+  justify-content: center;
+  background: var(--app-bg);
+  padding: 2rem;
 }
-.editor__pane--preview > .slide {
-  position: relative;
-  inset: auto;
+
+/* Live preview renders into the same fixed-1280x720-scaled thumbnail box
+   used elsewhere (overview grid, next-slide peek) — same JS-driven scale
+   trick, so text/spacing genuinely match what present mode looks like,
+   instead of the vmin-based .slide-content sizing (which resolves against
+   the real window, not this pane, and looked wrong at a glance). */
+.editor__pane--preview .thumb-preview {
   width: 100%;
-  height: 100%;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--app-muted) 25%, transparent);
 }
 
 /* ===== Palette (Cmd+K) ===== */
@@ -722,8 +762,8 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .palette__panel {
   width: 100%;
   max-width: 520px;
-  background: color-mix(in oklab, var(--md-bg) 96%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
+  background: color-mix(in oklab, var(--app-bg) 96%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 35%, transparent);
   border-radius: 10px;
   box-shadow: 0 30px 60px rgba(0,0,0,0.4);
   overflow: hidden;
@@ -732,13 +772,13 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   width: 100%;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
-  color: var(--md-fg);
+  border-bottom: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
+  color: var(--app-fg);
   font-family: var(--md-font-mono);
   font-size: 16px;
   padding: 0.9rem 1rem;
   outline: none;
-  caret-color: var(--md-accent);
+  caret-color: var(--app-accent);
 }
 .palette__results {
   list-style: none;
@@ -754,67 +794,28 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   padding: 0.5rem 1rem;
   font-family: var(--md-font-body);
   font-size: 14px;
-  color: var(--md-fg);
+  color: var(--app-fg);
   cursor: pointer;
 }
 .palette__results li[aria-selected="true"] {
-  background: color-mix(in oklab, var(--md-accent) 22%, transparent);
+  background: color-mix(in oklab, var(--app-accent) 22%, transparent);
 }
 .palette__results li .palette__num {
   font-family: var(--md-font-mono);
   font-size: 11px;
-  color: var(--md-muted);
+  color: var(--app-muted);
   min-width: 2.5rem;
 }
 .palette__results li .palette__hint {
   margin-left: auto;
   font-size: 11px;
-  color: var(--md-muted);
+  color: var(--app-muted);
 }
 
 /* ===== Overview edit ===== */
-
-.overview-edit {
-  position: fixed;
-  inset: 0;
-  background: color-mix(in oklab, #000 55%, transparent);
-  z-index: 150;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  padding: 4vh 4vw;
-}
-.overview-edit__panel {
-  width: 100%;
-  background: color-mix(in oklab, var(--md-bg) 96%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 30%, transparent);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-.overview-edit__header {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.8rem 1.2rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--md-muted) 20%, transparent);
-  font-family: var(--md-font-body);
-  font-size: 13px;
-  color: var(--md-fg);
-}
-.overview-edit__hint { color: var(--md-muted); font-size: 11px; }
-.overview-edit__close {
-  margin-left: auto;
-  background: transparent;
-  border: 0;
-  color: var(--md-muted);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-.overview-edit__close:hover { color: var(--md-fg); }
+/* (grid + tiles used by the deck landing page — chrome around each tile is
+   app-fixed; the thumbnail frame/content inside stays deck-themed, since
+   it's an actual live preview of the deck's real look.) */
 
 .overview-edit__grid {
   flex: 1 1 auto;
@@ -832,20 +833,20 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   flex-direction: column;
   gap: 0.4rem;
   background: transparent;
-  border: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
   border-radius: 8px;
   padding: 0.5rem;
   cursor: pointer;
   user-select: none;
   font: inherit;
   text-align: left;
-  color: var(--md-fg);
+  color: var(--app-fg);
   transition: border-color 0.12s, transform 0.12s;
 }
-.overview-edit__tile:hover { border-color: var(--md-accent); }
+.overview-edit__tile:hover { border-color: var(--app-accent); }
 .overview-edit__tile[draggable="true"]:active { cursor: grabbing; }
 .overview-edit__tile.is-drop-target {
-  outline: 2px dashed var(--md-accent);
+  outline: 2px dashed var(--app-accent);
   outline-offset: 3px;
 }
 .overview-edit__tile.is-dragging { opacity: 0.35; }
@@ -857,9 +858,9 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: color-mix(in oklab, var(--md-bg) 85%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
-  color: var(--md-fg);
+  background: color-mix(in oklab, var(--app-bg) 85%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 35%, transparent);
+  color: var(--app-fg);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -911,7 +912,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 }
 .overview-edit__num {
   font-family: var(--md-font-mono);
-  color: var(--md-muted);
+  color: var(--app-muted);
   font-size: 11px;
 }
 .overview-edit__title {
@@ -923,7 +924,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 
 .overview-edit__add {
   border-style: dashed;
-  color: var(--md-muted);
+  color: var(--app-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -931,7 +932,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   background: transparent;
   font-family: var(--md-font-body);
 }
-.overview-edit__add:hover { color: var(--md-accent); }
+.overview-edit__add:hover { color: var(--app-accent); }
 
 .overview-edit__edit-pill {
   position: absolute;
@@ -939,9 +940,9 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   right: 32px;
   padding: 1px 7px;
   border-radius: 9px;
-  background: color-mix(in oklab, var(--md-bg) 85%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
-  color: var(--md-fg);
+  background: color-mix(in oklab, var(--app-bg) 85%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 35%, transparent);
+  color: var(--app-fg);
   font-family: var(--md-font-mono);
   font-size: 10px;
   text-decoration: none;
@@ -950,7 +951,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   z-index: 2;
 }
 .overview-edit__tile:hover .overview-edit__edit-pill { opacity: 1; }
-.overview-edit__edit-pill:hover { color: var(--md-accent); border-color: var(--md-accent); }
+.overview-edit__edit-pill:hover { color: var(--app-accent); border-color: var(--app-accent); }
 
 /* ===== Overview landing page ===== */
 
@@ -963,10 +964,10 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   align-items: baseline;
   gap: 1.5rem;
   padding: 1rem 2rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
 }
-.overview-page__crumb { color: var(--md-muted); text-decoration: none; font-family: var(--md-font-mono); font-size: 12px; }
-.overview-page__crumb:hover { color: var(--md-fg); }
+.overview-page__crumb { color: var(--app-muted); text-decoration: none; font-family: var(--md-font-mono); font-size: 12px; }
+.overview-page__crumb:hover { color: var(--app-fg); }
 .overview-page__title {
   font-family: var(--md-font-heading);
   font-weight: 600;
@@ -975,7 +976,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   margin: 0;
   flex: 1;
 }
-.overview-page__subtitle { color: var(--md-muted); font-weight: 400; font-size: 0.85em; margin-left: 0.5rem; }
+.overview-page__subtitle { color: var(--app-muted); font-weight: 400; font-size: 0.85em; margin-left: 0.5rem; }
 .overview-page__actions { display: flex; gap: 0.5rem; }
 
 .overview-page__grid {
@@ -988,8 +989,8 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 
 .overview-page__footer {
   padding: 1rem 2rem;
-  border-top: 1px solid color-mix(in oklab, var(--md-muted) 15%, transparent);
-  color: var(--md-muted);
+  border-top: 1px solid color-mix(in oklab, var(--app-muted) 15%, transparent);
+  color: var(--app-muted);
   font-family: var(--md-font-mono);
   font-size: 11px;
 }
@@ -1011,18 +1012,34 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   max-width: 480px;
   max-height: 90vh;
   overflow: auto;
-  background: color-mix(in oklab, var(--md-bg) 96%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 30%, transparent);
+  background: color-mix(in oklab, var(--app-bg) 96%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 30%, transparent);
   border-radius: 12px;
   padding: 1.5rem;
   font-family: var(--md-font-body);
-  color: var(--md-fg);
+  color: var(--app-fg);
 }
 .settings__title {
   font-family: var(--md-font-heading);
   font-weight: 600;
   font-size: 1.1rem;
   margin: 0 0 1.2rem;
+}
+.settings__preview {
+  margin-bottom: 1.2rem;
+}
+.settings__preview .thumb-preview {
+  width: 100%;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--app-muted) 25%, transparent);
+}
+.settings__swatch {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  vertical-align: -0.1em;
+  border-radius: 3px;
+  background: var(--md-bg);
+  border: 1px solid color-mix(in oklab, var(--md-muted) 60%, transparent);
 }
 .settings__field { margin-bottom: 1.1rem; }
 .settings__label {
@@ -1031,7 +1048,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   font-family: var(--md-font-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--md-muted);
+  color: var(--app-muted);
   margin-bottom: 0.5rem;
 }
 .settings__radios { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -1040,14 +1057,14 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   align-items: center;
   gap: 0.35rem;
   padding: 0.3rem 0.6rem;
-  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 35%, transparent);
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
 }
 .settings__radio:has(input:checked) {
-  border-color: var(--md-accent);
-  color: var(--md-accent);
+  border-color: var(--app-accent);
+  color: var(--app-accent);
 }
 .settings__colors { display: flex; flex-wrap: wrap; gap: 1rem; }
 .settings__color {
@@ -1057,13 +1074,13 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   gap: 0.3rem;
   font-size: 11px;
   font-family: var(--md-font-mono);
-  color: var(--md-muted);
+  color: var(--app-muted);
   cursor: pointer;
 }
 .settings__color input[type="color"] {
   width: 2.2rem;
   height: 2.2rem;
-  border: 1px solid color-mix(in oklab, var(--md-muted) 35%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 35%, transparent);
   border-radius: 6px;
   padding: 0;
   background: transparent;
@@ -1079,32 +1096,32 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   width: 4.5rem;
   flex-shrink: 0;
   font-size: 12px;
-  color: var(--md-muted);
+  color: var(--app-muted);
   text-transform: capitalize;
 }
 .settings__font input[type="text"] {
   flex: 1;
-  background: color-mix(in oklab, var(--md-fg) 6%, transparent);
-  border: 1px solid color-mix(in oklab, var(--md-muted) 25%, transparent);
+  background: color-mix(in oklab, var(--app-fg) 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--app-muted) 25%, transparent);
   border-radius: 4px;
-  color: var(--md-fg);
+  color: var(--app-fg);
   font: inherit;
   font-size: 13px;
   padding: 0.3rem 0.5rem;
   outline: none;
 }
-.settings__font input[type="text"]:focus { border-color: var(--md-accent); }
+.settings__font input[type="text"]:focus { border-color: var(--app-accent); }
 .settings__actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 1.4rem;
   padding-top: 1rem;
-  border-top: 1px solid color-mix(in oklab, var(--md-muted) 20%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--app-muted) 20%, transparent);
 }
 .settings__status {
   flex: 1;
   font-size: 11px;
   font-family: var(--md-font-mono);
-  color: var(--md-muted);
+  color: var(--app-muted);
 }

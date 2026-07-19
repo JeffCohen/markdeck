@@ -1,13 +1,14 @@
 <% content_for :title, "#{@presentation.title} · Markdeck" %>
 
 <div class="overview-page"
-     style="background: var(--md-bg); color: var(--md-fg); font-family: var(--md-font-body), system-ui, sans-serif; min-height: 100vh;"
+     style="background: var(--app-bg); color: var(--app-fg); font-family: var(--md-font-body), system-ui, sans-serif; min-height: 100vh;"
      data-controller="overview-edit palette settings"
      data-overview-edit-slug-value="<%= @presentation.slug %>"
      data-overview-edit-create-url-value="<%= presentation_slides_path(@presentation) %>"
      data-overview-edit-reorder-url-value="<%= presentation_slide_order_path(@presentation) %>"
      data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>"
-     data-settings-update-url-value="<%= presentation_settings_path(@presentation) %>">
+     data-settings-update-url-value="<%= presentation_settings_path(@presentation) %>"
+     data-settings-default-colors-value="<%= { dark: Presentation::DEFAULT_COLORS_DARK, light: Presentation::DEFAULT_COLORS_LIGHT }.to_json %>">
 
   <header class="overview-page__top">
     <a href="<%= presentations_path %>" class="overview-page__crumb" data-turbo="false">← all decks</a>
@@ -27,10 +28,11 @@
     </div>
   </header>
 
-  <main class="overview-page__grid">
+  <main class="overview-page__grid" data-action="keydown->overview-edit#handleKey">
     <% @presentation.slides.each do |slide| %>
       <div class="overview-edit__tile theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
            draggable="true"
+           tabindex="0"
            data-overview-edit-target="tile"
            data-position="<%= slide.position %>"
            data-action="dragstart->overview-edit#dragStart dragover->overview-edit#dragOver drop->overview-edit#drop dragend->overview-edit#dragEnd click->overview-edit#presentSlide">
@@ -60,6 +62,8 @@
 
     <button type="button"
             class="overview-edit__tile overview-edit__add"
+            tabindex="0"
+            data-overview-edit-target="add"
             data-action="overview-edit#addSlide">
       <span>+ new slide</span>
     </button>
@@ -75,12 +79,27 @@
     <div class="settings__panel" data-action="click->settings#stopPropagation">
       <h3 class="settings__title">Deck settings</h3>
 
+      <div class="settings__preview">
+        <div class="thumb-preview" data-settings-target="previewFrame">
+          <div class="thumb-content slide-content">
+            <h2>Sample heading</h2>
+            <p>
+              Body copy in <span class="accent">accent</span>, <span class="muted">muted</span>,
+              and <span class="fg">fg</span>, plus a <span class="highlight">highlight</span> marker
+              and a <span class="settings__swatch"></span> bg swatch.
+            </p>
+            <pre><code>const mono = "sample";</code></pre>
+          </div>
+        </div>
+      </div>
+
       <div class="settings__field">
         <span class="settings__label">Theme</span>
         <div class="settings__radios">
           <% Presentation::THEMES.each do |theme| %>
             <label class="settings__radio">
               <input type="radio" name="theme" value="<%= theme %>" data-settings-target="theme"
+                     data-action="change->settings#syncPreview"
                      <%= "checked" if theme == @presentation.theme %>>
               <span><%= theme.titleize %></span>
             </label>
@@ -94,6 +113,7 @@
           <% Presentation::MODES.each do |mode| %>
             <label class="settings__radio">
               <input type="radio" name="mode" value="<%= mode %>" data-settings-target="mode"
+                     data-action="change->settings#modeChanged"
                      <%= "checked" if mode == @presentation.mode %>>
               <span><%= mode.titleize %></span>
             </label>
@@ -104,9 +124,10 @@
       <div class="settings__field">
         <span class="settings__label">Colors</span>
         <div class="settings__colors">
-          <% %w[bg fg accent muted].each do |key| %>
+          <% %w[bg fg accent muted highlight].each do |key| %>
             <label class="settings__color">
               <input type="color" data-settings-target="color" data-key="<%= key %>"
+                     data-action="input->settings#syncPreview"
                      value="<%= @presentation.colors[key] %>">
               <span><%= key %></span>
             </label>
@@ -120,6 +141,7 @@
           <label class="settings__font">
             <span class="settings__font-label"><%= key %></span>
             <input type="text" data-settings-target="font" data-key="<%= key %>"
+                   data-action="input->settings#syncPreview"
                    value="<%= @presentation.fonts[key] %>">
           </label>
         <% end %>
