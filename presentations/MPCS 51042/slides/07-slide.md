@@ -1,7 +1,11 @@
----
-center: true
-label: alan pic
----
-<img src="https://thepolitic.org/wp-content/uploads/2015/01/the-imitation-game-e1421515326307.jpg" class="fill">
+# Essentials of Languages
 
+* Defined structure
+* Verbs and nouns
+* Semantic syntax
+* Boolean logic / conditional branching
+* Scope
+* Namespacing / Modularity
 
+<!-- notes -->
+End with "who's credited with formulating these ideas?"

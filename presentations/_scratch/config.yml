@@ -1,14 +1,15 @@
 ---
-theme: editorial
-mode: dark
+title: Renamed Deck
+theme: terminal
+mode: light
+body_size: large
 fonts:
-  heading: Inter
+  heading: Manrope
   body: Inter
   mono: JetBrains Mono
 colors:
   bg: "#0a0a0a"
   fg: "#e5e5e5"
-  accent: "#60a5fa"
+  accent: "#ff0088"
   muted: "#737373"
   highlight: "#60a5fa"
-body_size: large

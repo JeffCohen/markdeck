@@ -1,11 +1,19 @@
 <section
-  class="slide<%= ' slide--center' if slide.centered? %>"
+  class="slide"
   data-deck-target="slide"
   data-slide-index="<%= slide.index %>"
   aria-hidden="true"
 >
-  <div class="slide-content">
-    <%== slide.html %>
+  <%# Same 1280x720 canvas markup as the editor preview and overview thumbs,
+      scaled to fit the viewport by deck_controller#scaleSlides. `slide--center`
+      goes on the canvas (not the section) so it matches where the preview puts
+      it and picks up the shared centering rule. %>
+  <div class="slide-stage">
+    <div class="thumb-preview">
+      <div class="thumb-content slide-content<%= ' slide--center' if slide.centered? %>">
+        <%== slide.html %>
+      </div>
+    </div>
   </div>
 
   <% if slide.notes? %>

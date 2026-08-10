@@ -1,5 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
+// The virtual slide canvas every surface renders into: present mode, the editor
+// preview, the overview thumbs, and each PDF page.
+const SLIDE_WIDTH = 1280
+const SLIDE_HEIGHT = 720
+
 export default class extends Controller {
   static targets = ["slide", "counter", "help", "progress", "notesDot"]
   static values = { count: Number, index: Number, slug: String, start: Number }
@@ -13,7 +18,10 @@ export default class extends Controller {
       const idx = this.readHash()
       if (idx !== this.indexValue) this.show(idx)
     }
-    this.resizeHandler = () => { if (document.body.classList.contains("peek-preview")) this.scaleThumbs() }
+    this.resizeHandler = () => {
+      this.scaleSlides()
+      if (document.body.classList.contains("peek-preview")) this.scaleThumbs()
+    }
     window.addEventListener("keydown", this.keyHandler)
     window.addEventListener("hashchange", this.hashHandler)
     window.addEventListener("resize", this.resizeHandler)
@@ -46,6 +54,8 @@ export default class extends Controller {
       el.classList.toggle("is-current", i === idx)
       el.setAttribute("aria-hidden", i === idx ? "false" : "true")
     })
+    // The slide that just became current has a layout box for the first time.
+    this.scaleSlides()
     if (this.hasCounterTarget) this.counterTarget.textContent = String(idx + 1)
     if (this.hasProgressTarget && this.countValue > 0) {
       const r = parseFloat(this.progressTarget.getAttribute("r")) || 18
@@ -84,13 +94,30 @@ export default class extends Controller {
     window.location = `/presentations/${this.slugValue}`
   }
 
+  // Fit the current slide's 1280x720 canvas into the viewport, letterboxing on
+  // whichever axis binds. Called synchronously from show() (before paint, so
+  // there's no flash of an unscaled canvas) and on every resize — a hidden
+  // slide has no layout box, so only .is-current can be measured.
+  scaleSlides() {
+    this.element.querySelectorAll(".slide.is-current .slide-stage").forEach(stage => {
+      const box = stage.parentElement
+      const w = box.clientWidth
+      const h = box.clientHeight
+      if (w > 0 && h > 0) {
+        const scale = Math.min(w / SLIDE_WIDTH, h / SLIDE_HEIGHT)
+        stage.style.setProperty("--slide-scale", String(scale))
+      }
+    })
+  }
+
+  // Scoped to the peek: the deck's own canvas is scaled by scaleSlides(), and
+  // an inline transform here would fight it.
   scaleThumbs() {
-    const VIRTUAL_WIDTH = 1280
-    this.element.querySelectorAll(".thumb-content").forEach(content => {
+    this.element.querySelectorAll(".speaker-peek--preview .thumb-content").forEach(content => {
       const wrap = content.parentElement
       const w = wrap.clientWidth
       if (w > 0) {
-        content.style.transform = `scale(${w / VIRTUAL_WIDTH})`
+        content.style.transform = `scale(${w / SLIDE_WIDTH})`
       }
     })
   }

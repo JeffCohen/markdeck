@@ -16,10 +16,25 @@ export default class extends Controller {
 
     window.addEventListener("resize", this._onResize = () => this._scaleThumbs())
     this._scaleThumbs()
+
+    // Safety net for drag state. dragend fires on the source tile, so a drag
+    // abandoned over a grid gap or released outside the window could leave a
+    // tile stuck with is-drop-target — whose dashed ring is the same width and
+    // colour as the focus ring, so it reads as a second focused slide.
+    this._onDragFinish = () => this._clearDragState()
+    window.addEventListener("dragend", this._onDragFinish)
+    window.addEventListener("drop", this._onDragFinish)
   }
 
   disconnect() {
     window.removeEventListener("resize", this._onResize)
+    window.removeEventListener("dragend", this._onDragFinish)
+    window.removeEventListener("drop", this._onDragFinish)
+  }
+
+  _clearDragState() {
+    this.tileTargets.forEach(t => t.classList.remove("is-dragging", "is-drop-target"))
+    this._dragFromPos = null
   }
 
   // Slide tiles plus the trailing "+ new slide" tile, in grid order.
@@ -112,9 +127,11 @@ export default class extends Controller {
   drop(e) {
     e.preventDefault()
     const toTile = e.currentTarget
-    toTile.classList.remove("is-drop-target")
     const toPos = Number(toTile.dataset.position)
     const fromPos = this._dragFromPos
+    // Read the source position before clearing, then clear unconditionally so a
+    // no-op or failed drop can't leave highlights behind.
+    this._clearDragState()
     if (!fromPos || !toPos || fromPos === toPos) return
 
     const total = this.tileTargets.length
@@ -128,11 +145,7 @@ export default class extends Controller {
   }
 
   dragEnd() {
-    this.tileTargets.forEach(t => {
-      t.classList.remove("is-dragging")
-      t.classList.remove("is-drop-target")
-    })
-    this._dragFromPos = null
+    this._clearDragState()
   }
 
   async _submitReorder(order) {

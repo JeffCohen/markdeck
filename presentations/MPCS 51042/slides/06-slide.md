@@ -1,11 +1,6 @@
 # Essentials of Languages
 
-* Defined structure
-* Verbs and nouns
-* Semantic syntax
-* Boolean logic / conditional branching
-* Scope
-* Namespacing / Modularity
+What are the main ingredients of a good programming language?
 
-<!-- notes -->
-End with "who's credited with formulating these ideas?"
+
+![](https://cdn.sanity.io/images/cq7w2e71/production/1667427bb39a7494532257e4c753d9bd3ad181ae-1613x1075.jpg)

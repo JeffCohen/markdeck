@@ -180,7 +180,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   /* Each slide gets its own page; force all to be visible */
   .deck > .slide,
   .deck > .slide.is-current {
-    display: flex !important;
+    display: block !important;
     position: relative !important;
     inset: auto !important;
     width: 1280px !important;
@@ -190,7 +190,17 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
     page-break-inside: avoid;
     break-after: page;
     break-inside: avoid;
-    font-size: 24px;
+  }
+
+  /* Each @page is already exactly 1280x720, so the screen's fit-to-viewport
+     scaling is not just unnecessary but wrong here — lay the canvas out flat.
+     Type size now comes from the canvas itself rather than a print-only
+     override, which is what makes the PDF match the preview exactly. */
+  .slide-stage {
+    position: static !important;
+    transform: none !important;
+    width: 1280px !important;
+    height: 720px !important;
   }
 
   .deck > .slide:last-of-type {
@@ -212,20 +222,58 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   .speaker-peek {
     display: none !important;
   }
+
+  /* .deck's siblings in <body> (the ⌘K palette, the mermaid module script)
+     contribute 6px of stray height even while visually hidden, which pushed
+     every export onto one extra near-blank page: 8 slides of content is
+     exactly 8 x 720px, and 5766px does not fit in 8 pages. Scoped with :has so
+     printing a non-deck page (editor, overview) isn't blanked out. */
+  body:has(> .deck) > *:not(.deck) {
+    display: none !important;
+  }
 }
 
+/* Present mode is a letterbox around the SAME fixed 1280x720 canvas the
+   editor preview, overview thumbs, and PDF export already render into (see
+   `.thumb-preview .thumb-content`), uniformly scaled to fit whatever viewport
+   exists. That's what makes a windowed browser, a fullscreen one, and the PDF
+   all agree: previously .slide filled the viewport with vmin-based type whose
+   clamp() floors stopped tracking below ~750px of height, so a windowed deck
+   silently overflowed differently than the preview showed. */
 .slide {
   position: fixed;
   inset: 0;
-  overflow: auto;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  padding: 6vmin 8vmin;
-  /* Headings use their own independent rem/vmin clamps (unaffected by this),
-     so --md-body-scale only resizes body copy: paragraphs/lists/inline code
-     inherit this as their font-size with nothing else overriding it. */
-  font-size: calc(clamp(24px, 3.2vmin, 42px) * var(--md-body-scale, 1));
+  overflow: hidden;
+  background: var(--md-bg);
+}
+
+/* The scale lives here and must NEVER move to .slide: a transform makes its
+   element a containing block for position:fixed descendants, which would tear
+   the speaker peeks out of the viewport and drag them into the scaled canvas.
+   Plain overflow:hidden on .slide doesn't clip fixed children, so the peeks
+   stay put. Absolutely centered rather than flex-centered so a viewport
+   smaller than the canvas still centres instead of clipping one-sided. */
+.slide-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1280px;
+  height: 720px;
+  transform-origin: center;
+  transform: translate(-50%, -50%) scale(var(--slide-scale, 1));
+}
+
+.slide-stage > .thumb-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* .slide-stage already did the scaling, so the canvas renders 1:1 inside it
+   (overriding the thumbnail default), and slide links stay clickable. */
+.slide-stage .thumb-content {
+  transform: none;
+  pointer-events: auto;
 }
 
 /* Per-slide opt-in: drop `<!-- center -->` anywhere in the .md to vertically
@@ -528,9 +576,14 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .mode-light .highlight .o, .mode-light .highlight .ow { color: #404040; }
 
 /* ===== Theme: minimal ===== */
-.theme-minimal .slide {
-  padding: 6vmin 10vmin;
-}
+/* NOTE: this theme used to carry `.theme-minimal .slide { padding: 6vmin 10vmin }`
+   for wider side margins, but it never rendered — rules in this @layer lose to
+   unlayered ones (like the canvas's own padding) no matter how specific they
+   are, which is the same layering that lets slide markdown override these
+   defaults with a Tailwind class. Left off rather than switched on, since
+   turning it on now would change how every minimal deck looks. To enable it,
+   move a `padding` override for `.theme-minimal .thumb-preview .thumb-content`
+   ABOVE the `@layer components` block. */
 .theme-minimal .slide-content h1 {
   letter-spacing: -0.03em;
 }
@@ -588,11 +641,9 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 }
 
 /* ===== Theme: aurora ===== */
-.theme-aurora body,
-.theme-aurora .slide {
-  position: relative;
-}
-.theme-aurora .slide::before {
+/* The glow sits on the canvas, not on .slide, so it stays inside the slide
+   area instead of bleeding across the letterbox — and shows in the preview. */
+.theme-aurora .thumb-preview .thumb-content::before {
   content: "";
   position: absolute;
   inset: -20%;
@@ -603,7 +654,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   z-index: 0;
   pointer-events: none;
 }
-.theme-aurora .slide > * {
+.theme-aurora .thumb-preview .thumb-content > * {
   position: relative;
   z-index: 1;
 }
@@ -857,15 +908,8 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
    app-fixed; the thumbnail frame/content inside stays deck-themed, since
    it's an actual live preview of the deck's real look.) */
 
-.overview-edit__grid {
-  flex: 1 1 auto;
-  overflow: auto;
-  padding: 1.2rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
-  align-content: start;
-}
+/* (No .overview-edit__grid rule here: the grid element is .overview-page__grid,
+   further down, which is where the scrolling lives.) */
 
 .overview-edit__tile {
   position: relative;
@@ -995,9 +1039,15 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 
 /* ===== Overview landing page ===== */
 
+/* Pinned to the viewport so the tile grid below is a bounded row that can
+   scroll on its own, keeping the header and footer in place. `min-height`
+   alone let the whole page grow past the viewport, where body's
+   `overflow-hidden` (themed layout) clipped the overflow with no way to reach
+   it — decks past ~2 rows of tiles simply had slides you couldn't see. */
 .overview-page {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  height: 100vh;
 }
 .overview-page__top {
   display: flex;
@@ -1025,6 +1075,11 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1rem;
   align-content: start;
+  /* min-height:0 is what actually makes the scroll work: a grid item defaults
+     to min-height:auto, which refuses to shrink below its content and pushes
+     the overflow outward instead of scrolling it. */
+  overflow: auto;
+  min-height: 0;
 }
 
 .overview-page__footer {

@@ -1,0 +1,5 @@
+---
+center: [unclosed
+---
+
+# Bad yaml

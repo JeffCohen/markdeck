@@ -1,0 +1,343 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Command-line access to the deck operations that are awkward to do by hand:
+# anything that touches slide ordering (the NN- filename prefixes) or config.yml.
+# Slide *content* is just markdown — edit slides/*.md directly for that.
+#
+# Run `bin/deck` with no arguments for usage.
+
+require_relative "../config/environment"
+
+USAGE = <<~TEXT
+  Usage: bin/deck <command> [args]
+
+  Reading
+    list                          all decks
+    list SLUG                     slides in a deck, with positions
+    cat SLUG N                    raw markdown of slide N
+    render SLUG N                 rendered HTML of slide N
+    validate SLUG                 check a deck for problems (non-zero exit on failure)
+
+  Structure
+    new SLUG [--title=] [--theme=] [--mode=] [--body-size=]
+    add SLUG [--after=N] [--stem=name] [--file=PATH|-]
+    write SLUG N [--file=PATH|-]  replace slide N's body
+    mv SLUG FROM TO               move slide FROM to position TO
+    rm SLUG N                     delete slide N
+    renumber SLUG                 rewrite NN- prefixes contiguously
+
+  Settings
+    set SLUG key=value ...        theme, mode, body_size, title,
+                                  fonts.heading|body|mono,
+                                  colors.bg|fg|accent|muted|highlight
+
+  Positions are always 1-based. Quote slugs containing spaces.
+  Themes: #{Presentation::THEMES.join(', ')} | Modes: #{Presentation::MODES.join(', ')} | Body sizes: #{Presentation::BODY_SIZES.join(', ')}
+  Slide syntax reference: FORMATTING.md
+TEXT
+
+def abort!(message)
+  warn "deck: #{message}"
+  exit 1
+end
+
+# Pulls --key=value flags out of argv, leaving positional args behind.
+def extract_flags!(argv)
+  flags = {}
+  argv.reject! do |arg|
+    next false unless arg.start_with?("--")
+
+    key, value = arg.delete_prefix("--").split("=", 2)
+    flags[key.tr("-", "_")] = value.nil? ? true : value
+    true
+  end
+  flags
+end
+
+def find_deck!(slug)
+  abort!("SLUG is required") if slug.nil? || slug.empty?
+  Presentation.find(slug) || abort!("no such deck: #{slug}")
+end
+
+def find_slide!(presentation, position)
+  n = position.to_i
+  abort!("N must be a positive slide position") if n < 1
+  presentation.slides[n - 1] ||
+    abort!("#{presentation.slug} has #{presentation.slides.size} slide(s); no slide #{n}")
+end
+
+# --file=PATH reads that file, --file=- reads stdin, absent returns nil.
+def read_body(flags)
+  source = flags["file"]
+  return nil if source.nil?
+  return $stdin.read if source == "-" || source == true
+
+  path = Pathname.new(source)
+  abort!("no such file: #{source}") unless path.file?
+  path.read
+end
+
+def describe_slide(slide)
+  bits = ["#{slide.position.to_s.rjust(3)}  #{slide.basename.ljust(32)} #{slide.title}"]
+  bits << "[chapter: #{slide.chapter}]" if slide.chapter
+  bits << "[label: #{slide.label}]" if slide.label
+  bits << "[centered]" if slide.centered?
+  bits << "[notes]" if slide.notes?
+  bits.join(" ")
+end
+
+def list(argv)
+  slug = argv.shift
+
+  if slug.nil?
+    decks = Presentation.all
+    abort!("no decks found in #{Presentation::ROOT}") if decks.empty?
+    decks.each do |deck|
+      puts "#{deck.slug.ljust(24)} #{deck.title.ljust(32)} " \
+           "#{deck.theme}/#{deck.mode}  #{deck.slides.size} slide(s)"
+    end
+  else
+    presentation = find_deck!(slug)
+    puts "#{presentation.slug} — #{presentation.title} " \
+         "(#{presentation.theme}/#{presentation.mode}, body #{presentation.body_size})"
+    puts "(no slides yet)" if presentation.slides.empty?
+    presentation.slides.each { |slide| puts describe_slide(slide) }
+  end
+end
+
+def cat(argv)
+  presentation = find_deck!(argv.shift)
+  print find_slide!(presentation, argv.shift).markdown
+end
+
+def render(argv)
+  presentation = find_deck!(argv.shift)
+  puts find_slide!(presentation, argv.shift).html
+end
+
+def new_deck(argv, flags)
+  slug = argv.shift
+  abort!("SLUG is required") if slug.nil? || slug.empty?
+
+  presentation = Presentation.create!(
+    slug: slug,
+    title: flags["title"],
+    theme: flags.fetch("theme", "minimal"),
+    mode: flags.fetch("mode", "dark"),
+    body_size: flags.fetch("body_size", "medium")
+  )
+  puts "created #{presentation.slug} (#{presentation.theme}/#{presentation.mode}) " \
+       "at presentations/#{presentation.slug}"
+end
+
+def add(argv, flags)
+  presentation = find_deck!(argv.shift)
+  after = flags["after"]&.to_i
+
+  if after && (after < 0 || after > presentation.slides.size)
+    abort!("--after=#{after} is out of range (0..#{presentation.slides.size})")
+  end
+
+  slide = presentation.create_slide!(
+    after_position: after,
+    body: read_body(flags),
+    stem: flags.fetch("stem", "slide")
+  )
+  puts "added slide #{slide.position}: #{slide.basename}"
+end
+
+def write(argv, flags)
+  presentation = find_deck!(argv.shift)
+  slide = find_slide!(presentation, argv.shift)
+  body = read_body(flags) || abort!("--file=PATH or --file=- is required")
+
+  slide.write!(body)
+  puts "wrote #{slide.basename} (#{body.bytesize} bytes)"
+end
+
+def move(argv)
+  presentation = find_deck!(argv.shift)
+  from = argv.shift.to_i
+  to = argv.shift.to_i
+  size = presentation.slides.size
+
+  abort!("FROM and TO must be within 1..#{size}") unless (1..size).cover?(from) && (1..size).cover?(to)
+
+  # reorder! wants the current positions listed in their new order.
+  order = (1..size).to_a
+  order.delete(from)
+  order.insert(to - 1, from)
+  presentation.reorder!(order)
+
+  puts "moved slide #{from} to position #{to}"
+  presentation.slides.each { |slide| puts describe_slide(slide) }
+end
+
+def remove(argv)
+  presentation = find_deck!(argv.shift)
+  slide = find_slide!(presentation, argv.shift)
+  basename = slide.basename
+
+  slide.source_path.delete
+  puts "deleted #{basename} (run `bin/deck renumber #{presentation.slug}` to close the prefix gap)"
+end
+
+def renumber(argv)
+  presentation = find_deck!(argv.shift)
+  abort!("#{presentation.slug} has no slides") if presentation.slides.empty?
+
+  # An identity permutation still rewrites every prefix, which is the point:
+  # it closes gaps left by `rm` and normalizes imported decks.
+  presentation.reorder!((1..presentation.slides.size).to_a)
+  presentation.slides.each { |slide| puts describe_slide(slide) }
+end
+
+def default_colors_for(mode)
+  mode == "light" ? Presentation::DEFAULT_COLORS_LIGHT : Presentation::DEFAULT_COLORS_DARK
+end
+
+# `set` takes a partial list of key=value pairs but update_config! wants the
+# full set, so start from the deck's current values and overlay the changes.
+#
+# Values that merely match the current defaults are dropped rather than
+# written out, which matters when the mode changes: carrying the dark palette
+# into a light deck would leave it with a near-black background. Genuinely
+# customized colors are kept, so `set mode=light` preserves your accent but
+# lets bg/fg follow the new mode.
+def set(argv)
+  presentation = find_deck!(argv.shift)
+  abort!("expected at least one key=value pair") if argv.empty?
+
+  old_defaults = default_colors_for(presentation.mode)
+  attrs = {
+    title: nil,
+    theme: presentation.theme,
+    mode: presentation.mode,
+    body_size: presentation.body_size,
+    fonts: presentation.fonts.reject { |k, v| Presentation::DEFAULT_FONTS[k] == v },
+    colors: presentation.colors.reject { |k, v| old_defaults[k] == v }
+  }
+
+  argv.each do |pair|
+    key, value = pair.split("=", 2)
+    abort!("expected key=value, got #{pair.inspect}") if value.nil? || value.empty?
+
+    case key
+    when "title" then attrs[:title] = value
+    when "theme", "mode", "body_size" then attrs[key.to_sym] = value
+    when /\A(fonts|colors)\.(.+)\z/
+      group = Regexp.last_match(1).to_sym
+      field = Regexp.last_match(2)
+      # Validate against the full key set, not attrs[group] — that's been
+      # pruned down to only the non-default entries.
+      allowed = group == :fonts ? Presentation::DEFAULT_FONTS.keys : Presentation::DEFAULT_COLORS_DARK.keys
+      abort!("unknown #{group} key #{field.inspect} (one of: #{allowed.join(', ')})") unless allowed.include?(field)
+      attrs[group][field] = value
+    else
+      abort!("unknown setting: #{key}")
+    end
+  end
+
+  presentation.update_config!(**attrs)
+  puts "#{presentation.slug}: #{presentation.theme}/#{presentation.mode}, " \
+       "body #{presentation.body_size}, title #{presentation.title.inspect}"
+end
+
+IMAGE_REFERENCE = /!\[[^\]]*\]\(([^)\s]+)/
+HTML_IMAGE_REFERENCE = /<img\b[^>]*\bsrc=["']([^"']+)["']/
+ABSOLUTE_URL = %r{\A([a-z][a-z0-9+.-]*:|/|#)}i
+COLS_CONTAINER = /<div[^>]*class=["'][^"']*\bcols(-3)?\b/
+
+def validate(argv)
+  presentation = find_deck!(argv.shift)
+  problems = []
+
+  raw = presentation.config_path.exist? ? (YAML.safe_load(presentation.config_path.read) || {}) : {}
+  unless presentation.config_path.exist?
+    problems << "config.yml is missing (defaults will be used)"
+  end
+  { "theme" => Presentation::THEMES, "mode" => Presentation::MODES,
+    "body_size" => Presentation::BODY_SIZES }.each do |key, allowed|
+    value = raw[key]
+    next if value.nil? || allowed.include?(value)
+    problems << "config.yml: #{key} #{value.inspect} is not one of #{allowed.join(', ')} (falling back to a default)"
+  end
+
+  problems << "slides/ directory is missing" unless presentation.slides_dir.directory?
+  problems << "deck has no slides" if presentation.slides.empty?
+
+  # Deliberately not checked: gaps or letter suffixes in the NN- prefixes
+  # ("06a-columns.md" next to "06-table.md"). Ordering comes from sorting
+  # basenames, so those are a supported way to insert without renumbering.
+  presentation.slides.each do |slide|
+    where = "#{slide.basename} (slide #{slide.position})"
+    body = slide.markdown
+
+    if (block = body[Slide::FRONT_MATTER_PATTERN, 1])
+      parsed = begin
+        YAML.safe_load(block)
+      rescue Psych::SyntaxError => e
+        problems << "#{where}: front matter is not valid YAML — #{e.message}"
+        nil
+      end
+      if parsed.is_a?(Hash)
+        unknown = parsed.keys.map(&:to_s) - Slide::PERMITTED_FRONT_MATTER_KEYS
+        unless unknown.empty?
+          problems << "#{where}: front matter key(s) #{unknown.join(', ')} will be ignored " \
+                      "(only #{Slide::PERMITTED_FRONT_MATTER_KEYS.join(', ')} are read)"
+        end
+      elsif !parsed.nil?
+        problems << "#{where}: front matter is not a YAML mapping"
+      end
+    end
+
+    body.scan(IMAGE_REFERENCE).flatten.concat(body.scan(HTML_IMAGE_REFERENCE).flatten).uniq.each do |src|
+      next if src.match?(ABSOLUTE_URL) || src.start_with?("data:")
+
+      relative = src.sub(%r{\A\.?/?images/}, "")
+      next if presentation.images_dir.join(relative).file?
+
+      problems << "#{where}: image #{src.inspect} not found at images/#{relative}"
+    end
+
+    if body.match?(COLS_CONTAINER) && !body.include?("<!-- col -->") && !body.match?(/<div>\s*\n/)
+      problems << "#{where}: a .cols container has no <!-- col --> marker and no hand-written column " \
+                  "<div>s, so everything will render as one column"
+    end
+  end
+
+  if problems.empty?
+    puts "#{presentation.slug}: OK (#{presentation.slides.size} slide(s))"
+  else
+    problems.each { |problem| puts "#{presentation.slug}: #{problem}" }
+    exit 1
+  end
+end
+
+argv = ARGV.dup
+command = argv.shift
+flags = extract_flags!(argv)
+
+begin
+  case command
+  when "list" then list(argv)
+  when "cat" then cat(argv)
+  when "render" then render(argv)
+  when "new" then new_deck(argv, flags)
+  when "add" then add(argv, flags)
+  when "write" then write(argv, flags)
+  when "mv" then move(argv)
+  when "rm" then remove(argv)
+  when "renumber" then renumber(argv)
+  when "set" then set(argv)
+  when "validate" then validate(argv)
+  when nil, "help", "-h", "--help" then puts USAGE
+  else
+    warn "deck: unknown command #{command.inspect}\n\n"
+    warn USAGE
+    exit 1
+  end
+rescue ArgumentError, Errno::ENOENT, Errno::EACCES => e
+  abort!(e.message)
+end

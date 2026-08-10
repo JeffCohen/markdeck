@@ -27,16 +27,24 @@ export default class extends Controller {
     this._saveInflight    = false
     this._saveDirty       = false
     this._currentEtag     = this.etagValue
+    // Baseline for _classesChanged(): the stylesheet on this page already
+    // covers every class the markdown had at load time.
+    this._baselineClasses = this._classTokens(this.textareaTarget.value)
 
     document.addEventListener("keydown", this._onKey = (e) => this._handleKey(e))
     window.addEventListener("resize", this._onResize = () => this._scalePreview())
     this._scalePreview()
 
-    // Arriving here via the "E" shortcut (or any nav) should drop the
-    // cursor straight into the markdown, not leave focus invisible on body.
     this.textareaTarget.focus()
-    const end = this.textareaTarget.value.length
-    this.textareaTarget.setSelectionRange(end, end)
+    // A _scheduleReload() reload stashes the caret on its way out; restoring it
+    // here keeps the reload invisible to someone editing mid-slide. Consumed
+    // once, so arriving via the "E" shortcut (or any real navigation) still
+    // drops the cursor at the end of the markdown rather than wherever the
+    // previous visit left it.
+    if (!this._restoreEditorState()) {
+      const end = this.textareaTarget.value.length
+      this.textareaTarget.setSelectionRange(end, end)
+    }
   }
 
   disconnect() {
@@ -183,9 +191,81 @@ export default class extends Controller {
   // Tailwind class typed into slide markdown) shows up without an explicit
   // Esc-to-overview round trip. Cancelled by onInput so it never yanks the
   // textarea out from under an actively-typing user.
+  //
+  // Only fires when the markdown's set of CSS classes actually changed, which
+  // is the sole reason the stylesheet could be stale. Reloading after *every*
+  // save also cleared the textarea's native undo stack, and combined with
+  // autosave that turned an ordinary deletion into unrecoverable data loss:
+  // the delete gets persisted, then undo can't reach back past the reload.
   _scheduleReload() {
     clearTimeout(this._reloadTimer)
-    this._reloadTimer = setTimeout(() => window.location.reload(), this.RELOAD_IDLE_MS)
+    this._reloadTimer = setTimeout(() => {
+      if (!this._classesChanged()) return
+      this._stashEditorState()
+      window.location.reload()
+    }, this.RELOAD_IDLE_MS)
+  }
+
+  _classTokens(body) {
+    const tokens = new Set()
+    for (const m of body.matchAll(/class\s*=\s*["']([^"']*)["']/g)) {
+      for (const token of m[1].split(/\s+/)) {
+        if (token) tokens.add(token)
+      }
+    }
+    return tokens
+  }
+
+  _classesChanged() {
+    const current = this._classTokens(this.textareaTarget.value)
+    if (current.size !== this._baselineClasses.size) return true
+    for (const token of current) {
+      if (!this._baselineClasses.has(token)) return true
+    }
+    return false
+  }
+
+  // Caret + scroll are stashed keyed by pathname, so slide 3's position can
+  // never be restored into slide 4, and the redirects from newSlideAfter /
+  // duplicateSlide (different pathname) are unaffected.
+  get _stateKey() {
+    return `markdeck:editor:${window.location.pathname}`
+  }
+
+  _stashEditorState() {
+    const ta = this.textareaTarget
+    try {
+      sessionStorage.setItem(this._stateKey, JSON.stringify({
+        start: ta.selectionStart,
+        end: ta.selectionEnd,
+        scrollTop: ta.scrollTop,
+      }))
+    } catch (err) {
+      console.warn("could not stash editor state:", err)
+    }
+  }
+
+  // Returns true if state was restored, false if there was none to restore.
+  _restoreEditorState() {
+    let stashed
+    try {
+      stashed = sessionStorage.getItem(this._stateKey)
+      sessionStorage.removeItem(this._stateKey)
+    } catch (err) {
+      return false
+    }
+    if (!stashed) return false
+
+    try {
+      const { start, end, scrollTop } = JSON.parse(stashed)
+      const ta = this.textareaTarget
+      const limit = ta.value.length
+      ta.setSelectionRange(Math.min(start, limit), Math.min(end, limit))
+      ta.scrollTop = scrollTop
+      return true
+    } catch (err) {
+      return false
+    }
   }
 
   // ---- new slide / duplicate -------------------------------------------------
@@ -287,21 +367,61 @@ export default class extends Controller {
       rest = rest.replace(CENTER_COMMENT_RE, "")
     }
 
-    const newBody = Object.keys(fm).length === 0
-      ? rest
-      : this._emitFrontMatter(fm) + rest
+    const oldFm = body.match(FRONT_MATTER_RE)?.[0] || ""
+    const newFm = Object.keys(fm).length === 0 ? "" : this._emitFrontMatter(fm)
 
-    // Preserve cursor position relative to the body portion.
+    // Toggling `center` also strips any legacy <!-- center --> marker, which is
+    // a second edit site elsewhere in the body. That rare case still needs a
+    // whole-value rewrite (and so still costs undo history); the common case
+    // touches only the front-matter block at the top.
+    if (key === "center" && CENTER_COMMENT_RE.test(body.slice(oldFm.length))) {
+      const ta = this.textareaTarget
+      const start = ta.selectionStart
+      const end = ta.selectionEnd
+      const delta = newFm.length - oldFm.length
+      ta.value = newFm + rest
+      if (start >= oldFm.length) ta.setSelectionRange(start + delta, end + delta)
+      return
+    }
+
+    this._replaceRange(0, oldFm.length, newFm)
+  }
+
+  // Replace [start, end) with `text` through execCommand so the edit lands on
+  // the browser's native undo stack. Assigning textarea.value directly — which
+  // this used to do — silently clears that stack, so a Center/Label/Chapter
+  // toggle would throw away every undo step behind it.
+  _replaceRange(start, end, text) {
     const ta = this.textareaTarget
-    const oldFmLen = (body.match(FRONT_MATTER_RE)?.[0] || "").length
-    const newFmLen = newBody.length - rest.length
-    const delta = newFmLen - oldFmLen
-    const start = ta.selectionStart
-    const end   = ta.selectionEnd
-    ta.value = newBody
-    // Only shift the cursor if it was after the front-matter block.
-    if (start >= oldFmLen) {
-      ta.setSelectionRange(start + delta, end + delta)
+    if (start === end && text === "") return
+
+    const selStart = ta.selectionStart
+    const selEnd = ta.selectionEnd
+    // execCommand only acts on the focused element, so the textarea has to take
+    // focus. The Label/Chapter fields rewrite front matter on every keystroke
+    // (input->), so focus has to go back or they'd become untypeable.
+    const previouslyFocused = document.activeElement
+    ta.focus()
+    ta.setSelectionRange(start, end)
+
+    let applied = false
+    try {
+      applied = text === ""
+        ? document.execCommand("delete")
+        : document.execCommand("insertText", false, text)
+    } catch {
+      applied = false
+    }
+    // execCommand is deprecated and could stop working; correctness of the
+    // markdown matters more than undo history, so fall back to a plain write.
+    if (!applied) ta.setRangeText(text, start, end)
+
+    const delta = text.length - (end - start)
+    const shift = (pos) => (pos >= end ? pos + delta : Math.min(pos, text.length))
+    ta.setSelectionRange(shift(selStart), shift(selEnd))
+
+    if (previouslyFocused && previouslyFocused !== ta && previouslyFocused.focus) {
+      previouslyFocused.focus()
     }
   }
 

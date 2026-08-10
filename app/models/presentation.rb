@@ -47,6 +47,31 @@ class Presentation
     load(slug)
   end
 
+  # Scaffold a new deck directory: config.yml plus empty slides/ and images/.
+  # Returns the new Presentation.
+  def self.create!(slug:, title: nil, theme: "minimal", mode: "dark", body_size: "medium")
+    slug = slug.to_s.strip
+    raise ArgumentError, "slug is required" if slug.empty?
+    raise ArgumentError, "slug may not contain a path separator" if slug.include?("/")
+
+    dir = ROOT.join(slug)
+    raise ArgumentError, "#{slug} already exists" if dir.exist?
+
+    dir.join("slides").mkpath
+    dir.join("images").mkpath
+
+    presentation = load(slug)
+    presentation.update_config!(
+      title: title,
+      theme: theme,
+      mode: mode,
+      body_size: body_size,
+      fonts: {},
+      colors: {}
+    )
+    presentation
+  end
+
   def self.load(slug)
     dir = ROOT.join(slug)
     config_path = dir.join("config.yml")
@@ -113,10 +138,13 @@ class Presentation
   end
 
   # Create a new slide file after `after_position` (1-based; nil = end of deck).
-  # Returns the new Slide object.
-  def create_slide!(after_position: nil, body: nil)
+  # `stem` names the file after its NN- prefix, e.g. stem: "pricing-chart"
+  # gives "07-pricing-chart.md". Returns the new Slide object.
+  def create_slide!(after_position: nil, body: nil, stem: "slide")
+    slides_dir.mkpath
+    stem = stem.to_s.strip.parameterize.presence || "slide"
     prefix = next_slide_prefix
-    path = slides_dir.join("#{prefix}-slide.md")
+    path = slides_dir.join("#{prefix}-#{stem}.md")
     path.binwrite(body || "# New slide\n")
 
     # If inserting in the middle, run a reorder so the new slide actually
@@ -178,12 +206,13 @@ class Presentation
 
   # Persist deck-level settings back to config.yml, preserving any other
   # keys already there (e.g. title). Mirrors Slide#write!'s tmp+rename.
-  def update_config!(theme:, mode:, fonts:, colors:, body_size: "medium")
-    raise ArgumentError, "invalid theme" unless THEMES.include?(theme)
-    raise ArgumentError, "invalid mode" unless MODES.include?(mode)
-    raise ArgumentError, "invalid body_size" unless BODY_SIZES.include?(body_size)
+  def update_config!(theme:, mode:, fonts:, colors:, body_size: "medium", title: nil)
+    raise ArgumentError, "invalid theme (one of: #{THEMES.join(', ')})" unless THEMES.include?(theme)
+    raise ArgumentError, "invalid mode (one of: #{MODES.join(', ')})" unless MODES.include?(mode)
+    raise ArgumentError, "invalid body_size (one of: #{BODY_SIZES.join(', ')})" unless BODY_SIZES.include?(body_size)
 
     raw = config_path.exist? ? (YAML.safe_load(config_path.read) || {}) : {}
+    raw["title"] = title if title.present?
     raw["theme"] = theme
     raw["mode"] = mode
     raw["body_size"] = body_size
@@ -194,6 +223,7 @@ class Presentation
     tmp.write(YAML.dump(raw))
     tmp.rename(config_path)
 
+    @title = title if title.present?
     @theme = theme
     @mode = mode
     @body_size = body_size

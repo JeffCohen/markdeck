@@ -8,9 +8,13 @@
 
   <label class="editor__attr">
     <span class="editor__attr-label">Label</span>
+    <%# change-> not input->: rewriting front matter on every keystroke meant a
+        parse-and-rewrite (and a focus round trip through the textarea) per
+        character. Committing on blur/Enter keeps the field as a syntax helper
+        without fighting the editor while you type. %>
     <input type="text"
            data-editor-target="labelInput"
-           data-action="input->editor#setLabel"
+           data-action="change->editor#setLabel"
            value="<%= slide.label %>"
            placeholder="(shown in overview & ⌘K)">
   </label>
@@ -19,7 +23,7 @@
     <span class="editor__attr-label">Chapter</span>
     <input type="text"
            data-editor-target="chapterInput"
-           data-action="input->editor#setChapter"
+           data-action="change->editor#setChapter"
            value="<%= slide.chapter %>"
            placeholder="(optional grouping)">
   </label>

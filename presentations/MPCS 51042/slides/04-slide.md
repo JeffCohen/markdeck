@@ -1,15 +1,15 @@
-# AI Policy
-
-You can use AI for this course.
-
-You may not use AI during in-class assessments (quizzes and exams)
-
 ---
-I encourage you to use it to ask questions as you would to me or a TA.
-
+label: Schedule
 ---
-
-BEWARE that AI will...
-  * tell you WAY MORE than you need to know
-  * give you solutions that will probably NOT be acceptable on an assignment, quiz, or exam.
-
+|Week|In Class|At Home|
+|----|--------|-------|
+| 1 | Lecture 1, Quiz 1| HW 1|
+| 2 | Quiz 2, Lecture 2 | HW 2 |
+| 3 | Quiz 3, Lecture 3| HW 3 |
+| 4 | Exam 1, Lecture 4| HW 4 |
+| 5 | Quiz 4, Lecture 5| HW 5 |
+| 6 | Quiz 5, Lecture 6| HW 6 |
+| 7 | Quiz 6, Lecture 7| HW 7 |
+| 8 | Lecture 8| HW 8 |
+|    THANKSGIVING | --- | --- |
+| 9 | Exam 2, Lecture 9| --- |
