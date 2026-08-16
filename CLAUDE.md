@@ -22,6 +22,9 @@ bin/deck cat welcome 3                         # read slide 3
 printf '# Title\n' | bin/deck add welcome --after=2 --stem=agenda --file=-
 bin/deck mv welcome 7 2
 bin/deck set welcome theme=aurora mode=light
+bin/deck chapters welcome                      # sections with their slide ranges
+bin/deck chapter welcome 6 "Week 6"            # start a section at slide 6
+bin/deck unchapter welcome 6                   # remove the marker, keep the slide
 bin/deck validate welcome                      # run this after editing a deck
 ```
 
@@ -33,6 +36,7 @@ Constraints worth remembering:
 
 - Themes: `minimal`, `editorial`, `terminal`, `aurora`. Modes: `dark`, `light`. Body sizes: `small`, `medium`, `large`. Anything else falls back to a default without complaint.
 - Front matter reads **only** `center`, `label`, and `chapter`. Other keys are dropped.
+- `chapter:` is **sticky** — the slide carrying it opens a section and following slides inherit it until the next marker. `Presentation#chapters` derives the groups; nothing stores them. Chapters drive the overview's collapsible headers, ⌘K grouping, and `/presentations/<deck>/chapters/<slug>` (present one section, navigation clamped to it).
 - Slide positions in `bin/deck` are 1-based.
 - Prefix gaps and letter suffixes (`06a-columns.md`) are fine — ordering is a basename sort. `bin/deck renumber` normalizes them only if you want that.
 - One deck slug contains a space (`MPCS 51042`), so quote slug arguments.

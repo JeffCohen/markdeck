@@ -6,8 +6,28 @@ const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
 
 export default class extends Controller {
-  static targets = ["slide", "counter", "help", "progress", "notesDot"]
-  static values = { count: Number, index: Number, slug: String, start: Number }
+  static targets = ["slide", "counter", "total", "help", "progress", "notesDot"]
+  static values = {
+    count: Number, index: Number, slug: String, start: Number,
+    // 1-based, inclusive. Set only when presenting a single chapter; navigation
+    // is then clamped to this span while slide positions stay deck-global.
+    rangeStart: Number, rangeEnd: Number,
+  }
+
+  // Inclusive 0-based bounds of what's navigable.
+  get lowIndex() {
+    return this.hasRangeStartValue && this.rangeStartValue > 0 ? this.rangeStartValue - 1 : 0
+  }
+
+  get highIndex() {
+    return this.hasRangeEndValue && this.rangeEndValue > 0
+      ? Math.min(this.rangeEndValue - 1, this.countValue - 1)
+      : this.countValue - 1
+  }
+
+  get rangeLength() {
+    return this.highIndex - this.lowIndex + 1
+  }
 
   connect() {
     const hashed = this.readHash()
@@ -40,8 +60,8 @@ export default class extends Controller {
   }
 
   clamp(i) {
-    if (!Number.isFinite(i)) return 0
-    return Math.max(0, Math.min(this.countValue - 1, i))
+    if (!Number.isFinite(i)) return this.lowIndex
+    return Math.max(this.lowIndex, Math.min(this.highIndex, i))
   }
 
   show(idx) {
@@ -56,11 +76,14 @@ export default class extends Controller {
     })
     // The slide that just became current has a layout box for the first time.
     this.scaleSlides()
-    if (this.hasCounterTarget) this.counterTarget.textContent = String(idx + 1)
-    if (this.hasProgressTarget && this.countValue > 0) {
+    // Counter and progress read relative to the range, so a chapter shows
+    // "3 / 6" rather than the slide's position in the whole deck.
+    if (this.hasCounterTarget) this.counterTarget.textContent = String(idx - this.lowIndex + 1)
+    if (this.hasTotalTarget) this.totalTarget.textContent = String(this.rangeLength)
+    if (this.hasProgressTarget && this.rangeLength > 0) {
       const r = parseFloat(this.progressTarget.getAttribute("r")) || 18
       const circumference = 2 * Math.PI * r
-      const pct = this.countValue === 1 ? 1 : idx / (this.countValue - 1)
+      const pct = this.rangeLength === 1 ? 1 : (idx - this.lowIndex) / (this.rangeLength - 1)
       this.progressTarget.style.strokeDashoffset = String(circumference * (1 - pct))
     }
     const newHash = `#${idx + 1}`
@@ -86,8 +109,8 @@ export default class extends Controller {
 
   next() { this.show(this.indexValue + 1) }
   prev() { this.show(this.indexValue - 1) }
-  first() { this.show(0) }
-  last() { this.show(this.countValue - 1) }
+  first() { this.show(this.lowIndex) }
+  last() { this.show(this.highIndex) }
 
   goToOverview() {
     if (!this.hasSlugValue) return

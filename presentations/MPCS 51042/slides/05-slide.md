@@ -1,15 +1,6 @@
-# AI Policy
+# Essentials of Languages
 
-You can use AI for this course.
+What are the main ingredients of a good programming language?
 
-You may not use AI during in-class assessments (quizzes and exams)
 
----
-I encourage you to use it to ask questions as you would to me or a TA.
-
----
-
-BEWARE that AI will...
-  * tell you WAY MORE than you need to know
-  * give you solutions that will probably NOT be acceptable on an assignment, quiz, or exam.
-
+![](https://cdn.sanity.io/images/cq7w2e71/production/1667427bb39a7494532257e4c753d9bd3ad181ae-1613x1075.jpg)

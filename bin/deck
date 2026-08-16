@@ -21,11 +21,16 @@ USAGE = <<~TEXT
 
   Structure
     new SLUG [--title=] [--theme=] [--mode=] [--body-size=]
-    add SLUG [--after=N] [--stem=name] [--file=PATH|-]
+    add SLUG [--after=N] [--stem=name] [--chapter=Name] [--file=PATH|-]
     write SLUG N [--file=PATH|-]  replace slide N's body
     mv SLUG FROM TO               move slide FROM to position TO
     rm SLUG N                     delete slide N
     renumber SLUG                 rewrite NN- prefixes contiguously
+
+  Chapters (sticky: a marker opens a chapter, later slides inherit it)
+    chapters SLUG                 chapters with their slide ranges
+    chapter SLUG N NAME           start a chapter at slide N
+    unchapter SLUG N              remove slide N's chapter marker
 
   Settings
     set SLUG key=value ...        theme, mode, body_size, title,
@@ -102,13 +107,50 @@ def list(argv)
     puts "#{presentation.slug} — #{presentation.title} " \
          "(#{presentation.theme}/#{presentation.mode}, body #{presentation.body_size})"
     puts "(no slides yet)" if presentation.slides.empty?
-    presentation.slides.each { |slide| puts describe_slide(slide) }
+
+    # Grouped by chapter so the inherited grouping is visible: which slides a
+    # marker actually covers isn't obvious from the files alone.
+    presentation.chapters.each do |chapter|
+      puts "  — #{chapter.name} —" if chapter.named?
+      chapter.slides.each { |slide| puts describe_slide(slide) }
+    end
   end
 end
 
 def cat(argv)
   presentation = find_deck!(argv.shift)
   print find_slide!(presentation, argv.shift).markdown
+end
+
+def chapters(argv)
+  presentation = find_deck!(argv.shift)
+  groups = presentation.chapters
+
+  if groups.none?(&:named?)
+    puts "#{presentation.slug}: no chapters yet " \
+         "(add one with `bin/deck chapter #{presentation.slug.inspect} N \"Name\"`)"
+    return
+  end
+
+  groups.each do |chapter|
+    name = chapter.named? ? chapter.name : "(no chapter)"
+    range = chapter.size == 1 ? chapter.first_position.to_s : "#{chapter.first_position}-#{chapter.last_position}"
+    puts "#{range.ljust(8)} #{name.ljust(34)} #{chapter.size} slide(s)#{"  /#{chapter.slug}" if chapter.named?}"
+  end
+end
+
+# Chapter markers are ordinary front matter, so both of these go through the
+# same pure transform the editor and the overview UI use.
+def set_chapter(argv, name)
+  presentation = find_deck!(argv.shift)
+  slide = find_slide!(presentation, argv.shift)
+  slide.write!(Slide.with_front_matter(slide.markdown, key: "chapter", value: name))
+
+  if name
+    puts "#{slide.basename}: chapter #{name.inspect}"
+  else
+    puts "#{slide.basename}: chapter marker removed"
+  end
 end
 
 def render(argv)
@@ -139,12 +181,16 @@ def add(argv, flags)
     abort!("--after=#{after} is out of range (0..#{presentation.slides.size})")
   end
 
+  body = read_body(flags)
+  chapter = flags["chapter"]
+  body = Slide.with_front_matter(body || "# New slide\n", key: "chapter", value: chapter) if chapter.is_a?(String)
+
   slide = presentation.create_slide!(
     after_position: after,
-    body: read_body(flags),
+    body: body,
     stem: flags.fetch("stem", "slide")
   )
-  puts "added slide #{slide.position}: #{slide.basename}"
+  puts "added slide #{slide.position}: #{slide.basename}#{" (opens chapter #{chapter.inspect})" if chapter.is_a?(String)}"
 end
 
 def write(argv, flags)
@@ -267,6 +313,15 @@ def validate(argv)
   problems << "slides/ directory is missing" unless presentation.slides_dir.directory?
   problems << "deck has no slides" if presentation.slides.empty?
 
+  # Two chapters whose names parameterize the same share a URL stem, so the
+  # second gets a "-2" suffix — which works, but makes the link order-dependent.
+  named = presentation.named_chapters
+  named.group_by { |chapter| chapter.name.parameterize }.each_value do |group|
+    next if group.size < 2
+    problems << "chapters #{group.map { |c| c.name.inspect }.join(' and ')} share a URL slug; " \
+                "their links (#{group.map(&:slug).join(', ')}) depend on deck order"
+  end
+
   # Deliberately not checked: gaps or letter suffixes in the NN- prefixes
   # ("06a-columns.md" next to "06-table.md"). Ordering comes from sorting
   # basenames, so those are a supported way to insert without renumbering.
@@ -324,6 +379,14 @@ begin
   when "list" then list(argv)
   when "cat" then cat(argv)
   when "render" then render(argv)
+  when "chapters" then chapters(argv)
+  when "chapter"
+    slug = argv.shift
+    n = argv.shift
+    name = argv.shift
+    abort!("usage: deck chapter SLUG N NAME") if name.nil? || name.strip.empty?
+    set_chapter([slug, n], name.strip)
+  when "unchapter" then set_chapter(argv, nil)
   when "new" then new_deck(argv, flags)
   when "add" then add(argv, flags)
   when "write" then write(argv, flags)

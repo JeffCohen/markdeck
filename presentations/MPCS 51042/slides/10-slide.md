@@ -1,25 +1,18 @@
-# Programming Essentials
+---
+chapter: AI Policy
+---
+# AI Policy
 
+You can use AI for this course.
 
-<div class="cols accent pt-8">
+You may not use AI during in-class assessments (quizzes and exams)
 
-* Architecture
-* Engineering
-* Observability
-* Resource Management
-* Instructions vs Data
-* Notion of Time
-<!-- col -->
-* Determinism
-* Input -> Processing -> Output
-* Quality Control
-* Deployment
-* Complexity Analysis
-* Metaprogramming
+---
+I encourage you to use it to ask questions as you would to me or a TA.
 
-</div>
+---
 
-<hr>
-<p class="text-center">History and Chesterton's Fence</p>
-
+BEWARE that AI will...
+  * tell you WAY MORE than you need to know
+  * give you solutions that will probably NOT be acceptable on an assignment, quiz, or exam.
 

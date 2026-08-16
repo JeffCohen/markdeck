@@ -13,7 +13,10 @@
   --app-bg: #0a0a0a;
   --app-fg: #e5e5e5;
   --app-accent: #60a5fa;
-  --app-muted: #737373;
+  /* Was #737373, which is only 4.17:1 against --app-bg — under WCAG AA, and
+     most of what uses it is 11px mono (slide counts, ranges, footer hints).
+     #8d8d8d measures ~5.96:1 while staying clearly subordinate to --app-fg. */
+  --app-muted: #8d8d8d;
 }
 
 /* ===== Slide deck core ===== */
@@ -878,6 +881,20 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   max-height: 50vh;
   overflow: auto;
 }
+.palette__chapter {
+  font-family: var(--md-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-muted);
+  padding: 0.5rem 1rem 0.2rem;
+  cursor: default;
+}
+.palette__chapter:not(:first-child) {
+  border-top: 1px solid color-mix(in oklab, var(--app-muted) 18%, transparent);
+  margin-top: 0.25rem;
+}
+
 .palette__results li {
   display: flex;
   align-items: center;
@@ -910,6 +927,138 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 
 /* (No .overview-edit__grid rule here: the grid element is .overview-page__grid,
    further down, which is where the scrolling lives.) */
+
+/* ===== Chapters ===== */
+/* A header row spanning the full grid width, so tiles keep flowing in one grid
+   rather than needing a nested container per chapter. */
+.overview-chapter {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0 0.35rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--app-muted) 22%, transparent);
+  margin-top: 0.6rem;
+}
+.overview-chapter:first-child { margin-top: 0; }
+
+.overview-chapter__toggle {
+  background: transparent;
+  border: 0;
+  color: var(--app-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+.overview-chapter__toggle:hover { color: var(--app-fg); }
+
+.overview-chapter__name {
+  font-family: var(--md-font-heading);
+  font-weight: 600;
+  /* Sits below .overview-page__title (1.4rem) so the deck name still reads as
+     the page heading, but clearly above the tile captions. */
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  color: var(--app-fg);
+}
+
+.overview-chapter__count {
+  font-family: var(--md-font-mono);
+  font-size: 11px;
+  color: var(--app-muted);
+  flex: 1;
+}
+
+.overview-chapter__present {
+  font-family: var(--md-font-mono);
+  /* Full foreground, not muted: this is a control, and at muted-grey it read as
+     a caption rather than something you could click. */
+  font-size: 11px;
+  color: var(--app-fg);
+  text-decoration: none;
+  border: 1px solid color-mix(in oklab, var(--app-muted) 30%, transparent);
+  border-radius: 5px;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+}
+.overview-chapter__present:hover {
+  color: var(--app-accent);
+  border-color: var(--app-accent);
+}
+
+.overview-edit__tile.is-collapsed { display: none; }
+
+/* Per-tile chapter marker control. In the tile's normal flow, as a row above the
+   thumbnail — NOT absolutely positioned like the edit/delete pills. Those can
+   overlay the thumbnail because they're invisible until you hover; a chapter
+   that IS set is permanently visible and would otherwise sit on top of the
+   slide's own heading. Keeping the row present (at opacity 0) on unmarked tiles
+   means hovering never shifts the layout. */
+.overview-edit__chapter {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-family: var(--md-font-mono);
+  font-size: 10px;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in oklab, var(--app-muted) 30%, transparent);
+  background: color-mix(in oklab, var(--app-bg) 88%, transparent);
+  color: var(--app-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, border-color 0.12s;
+}
+.overview-edit__tile:hover .overview-edit__chapter,
+.overview-edit__tile:focus-visible .overview-edit__chapter,
+.overview-edit__chapter.is-set {
+  opacity: 1;
+}
+.overview-edit__chapter:hover { color: var(--app-accent); border-color: var(--app-accent); }
+.overview-edit__chapter.is-set {
+  color: var(--app-accent);
+  border-color: color-mix(in oklab, var(--app-accent) 45%, transparent);
+}
+
+.overview-edit__chapter-name,
+.overview-edit__chapter-clear {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.overview-edit__chapter-clear {
+  opacity: 0.55;
+  padding-left: 0.2rem;
+  border-left: 1px solid color-mix(in oklab, var(--app-muted) 30%, transparent);
+}
+.overview-edit__chapter-clear:hover { opacity: 1; color: #ef4444; }
+
+/* Replaces the control in place, so it has to sit in the same flow row rather
+   than floating over the thumbnail. */
+.overview-edit__chapter-input {
+  align-self: stretch;
+  width: 100%;
+  font-family: var(--md-font-mono);
+  font-size: 10px;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--app-accent);
+  background: var(--app-bg);
+  color: var(--app-fg);
+  outline: none;
+}
 
 .overview-edit__tile {
   position: relative;

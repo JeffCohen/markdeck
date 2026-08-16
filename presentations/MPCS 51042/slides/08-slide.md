@@ -1,7 +1,11 @@
----
-center: true
-label: alan pic
----
-<img src="https://thepolitic.org/wp-content/uploads/2015/01/the-imitation-game-e1421515326307.jpg" class="fill">
+# Alan Turing
 
+### Notion of "Completeness"
 
+<div class="mt-8">
+
+  1. Sequencing
+  1. Conditional Branching
+  1. Unlimited Memory
+
+</div>

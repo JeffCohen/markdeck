@@ -1,3 +1,6 @@
+---
+chapter: Course Introduction
+---
 # MPCS 51042
 ## Python Programming
 

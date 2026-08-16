@@ -32,6 +32,26 @@ class Presentation
 
   attr_reader :slug, :title, :theme, :mode, :body_size, :fonts, :colors, :slides
 
+  # A run of consecutive slides sharing a `chapter:` marker. `name` is nil for
+  # the leading run of slides that appear before the deck's first marker.
+  Chapter = Struct.new(:name, :slug, :slides, keyword_init: true) do
+    def named?
+      !name.nil?
+    end
+
+    def first_position
+      slides.first.position
+    end
+
+    def last_position
+      slides.last.position
+    end
+
+    def size
+      slides.size
+    end
+  end
+
   def self.all
     return [] unless ROOT.exist?
 
@@ -118,6 +138,33 @@ class Presentation
       "--md-font-body" => %("#{fonts['body']}", #{SANS_FALLBACK}),
       "--md-font-mono" => %("#{fonts['mono']}", #{MONO_FALLBACK})
     }
+  end
+
+  # Slides grouped into chapters. A `chapter:` marker is STICKY: the slide
+  # carrying it opens a chapter and every following slide inherits it until the
+  # next marker, so a group costs one line rather than one per slide. Slides
+  # ahead of the first marker come back as a single unnamed leading chapter.
+  def chapters
+    groups = []
+
+    slides.each do |slide|
+      # A marker always opens a new group, even when it repeats the current
+      # name — "start a chapter here" is what the author asked for. The leading
+      # unnamed run needs a group to live in too.
+      groups << Chapter.new(name: slide.chapter, slug: nil, slides: []) if slide.chapter || groups.empty?
+      groups.last.slides << slide
+    end
+
+    assign_chapter_slugs(groups)
+    groups
+  end
+
+  def named_chapters
+    chapters.select(&:named?)
+  end
+
+  def find_chapter(chapter_slug)
+    named_chapters.find { |chapter| chapter.slug == chapter_slug }
   end
 
   def slides_dir
@@ -232,6 +279,21 @@ class Presentation
   end
 
   private
+
+  # URL-safe ids for chapter links. Two chapters can legitimately carry the
+  # same name (or names that parameterize identically), so collisions get a
+  # numeric suffix in document order — stable as long as the names are.
+  def assign_chapter_slugs(groups)
+    seen = Hash.new(0)
+
+    groups.each do |group|
+      next unless group.named?
+
+      base = group.name.parameterize.presence || "chapter"
+      seen[base] += 1
+      group.slug = seen[base] > 1 ? "#{base}-#{seen[base]}" : base
+    end
+  end
 
   def default_colors_for_mode
     @mode == "light" ? DEFAULT_COLORS_LIGHT : DEFAULT_COLORS_DARK

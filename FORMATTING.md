@@ -14,7 +14,17 @@ Markdown syntax supported (tables, code fences, images, etc).
   ```
 - **`center: true`** — vertically/horizontally centers the slide content. Legacy equivalent: `<!-- center -->` anywhere in the body.
 - **`label`** — short name shown in the overview grid / palette instead of the slide's heading.
-- **`chapter`** — groups slides under a section name (overview grid).
+- **`chapter`** — opens a named section. **Sticky**: the slide carrying the key starts the chapter and every following slide belongs to it until the next `chapter:` marker, so a section costs one line rather than one per slide. Slides before the first marker stay ungrouped.
+
+  Chapters give you three things: collapsible section headers in the overview grid, groupings in the ⌘K palette (and the name becomes searchable, so "unix" pulls up the whole section), and a **Present section →** link that scopes presenting to just those slides — arrow keys stop at the section edges and the counter reads `2 / 6`. That link is a normal URL (`/presentations/<deck>/chapters/<chapter-slug>`), so it's worth bookmarking for a single lecture.
+
+  Easiest way to manage them is the overview grid: hover any slide for **+ chapter**, click a chapter name to rename it, or click its **×** to remove the marker — which keeps the slide and folds it into the section above. From the CLI:
+
+  ```sh
+  bin/deck chapters welcome              # sections with their slide ranges
+  bin/deck chapter welcome 6 "Week 6"    # start a section at slide 6
+  bin/deck unchapter welcome 6           # remove the marker, keep the slide
+  ```
 - **Speaker notes**: stripped from the rendered slide, shown via the notes peek (`N` key). Two forms:
   ```
   <!-- notes wrapped inline text -->

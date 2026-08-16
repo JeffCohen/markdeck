@@ -17,7 +17,7 @@
     class="absolute inset-0 flex items-center justify-center text-[11px] font-mono leading-none"
     style="color: var(--md-accent);"
   >
-    <span data-deck-target="counter">1</span><span class="opacity-50 mx-0.5">/</span><%= presentation.slides.size %>
+    <span data-deck-target="counter">1</span><span class="opacity-50 mx-0.5">/</span><span data-deck-target="total"><%= presentation.slides.size %></span>
   </div>
   <span
     class="hidden absolute top-0 right-0 w-2 h-2 rounded-full"
@@ -36,6 +36,19 @@
 >
   ← overview
 </a>
+
+<%# Presenting one chapter: name the scope and offer a way out of it, so it's
+    never a mystery why arrowing right stops at the end of the section. %>
+<% if defined?(@chapter) && @chapter %>
+  <div class="fixed top-4 left-1/2 -translate-x-1/2 text-xs font-mono flex items-center gap-2 select-none">
+    <span style="color: var(--md-accent);"><%= @chapter.name %></span>
+    <a href="<%= presentation_slide_path(presentation, n: @chapter.first_position) %>"
+       class="opacity-40 hover:opacity-100 transition-opacity"
+       style="color: var(--md-muted);"
+       data-turbo="false"
+       title="Leave the section and present the whole deck">whole deck →</a>
+  </div>
+<% end %>
 
 <span
   class="fixed top-4 right-6 text-xs font-mono opacity-30 hover:opacity-80 transition-opacity select-none"

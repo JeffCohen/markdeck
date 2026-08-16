@@ -1,11 +1,25 @@
-# Alan Turing
+# Programming Essentials
 
-### Notion of "Completeness"
 
-<div class="mt-8">
+<div class="cols accent pt-8">
 
-  1. Sequencing
-  1. Conditional Branching
-  1. Unlimited Memory
+* Architecture
+* Engineering
+* Observability
+* Resource Management
+* Instructions vs Data
+* Notion of Time
+<!-- col -->
+* Determinism
+* Input -> Processing -> Output
+* Quality Control
+* Deployment
+* Complexity Analysis
+* Metaprogramming
 
 </div>
+
+<hr>
+<p class="text-center">History and Chesterton's Fence</p>
+
+

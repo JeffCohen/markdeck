@@ -14,7 +14,16 @@ Rails.application.routes.draw do
         constraints: { filename: /[^\/]+/ }, format: false, on: :member
 
     resources :slides, only: %i[show edit update create destroy],
-              param: :n, constraints: { n: /\d+/ }
+              param: :n, constraints: { n: /\d+/ } do
+      # A slide's chapter marker is its own resource rather than a custom action
+      # on slides: PATCH opens a chapter here, DELETE removes the marker while
+      # leaving the slide alone.
+      resource :chapter, only: %i[update destroy], module: :slides
+    end
+
+    # Presenting a single chapter — a scoped view of the deck.
+    resources :chapters, only: :show, param: :chapter_slug
+
     resource  :slide_order, only: :update
     resource  :settings, only: :update, module: :presentations
     resources :previews, only: :create, module: :presentations

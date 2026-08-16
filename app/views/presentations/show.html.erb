@@ -30,35 +30,82 @@
   </header>
 
   <main class="overview-page__grid" data-action="keydown->overview-edit#handleKey">
-    <% @presentation.slides.each do |slide| %>
-      <div class="overview-edit__tile theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
-           draggable="true"
-           tabindex="0"
-           data-overview-edit-target="tile"
-           data-position="<%= slide.position %>"
-           data-action="dragstart->overview-edit#dragStart dragover->overview-edit#dragOver drop->overview-edit#drop dragend->overview-edit#dragEnd click->overview-edit#presentSlide">
-        <button type="button"
-                class="overview-edit__delete"
-                title="Delete slide"
-                data-action="click->overview-edit#deleteSlide"
-                data-position="<%= slide.position %>">×</button>
-        <a class="overview-edit__edit-pill"
-           href="<%= edit_presentation_slide_path(@presentation, n: slide.position) %>"
-           data-turbo="false"
-           data-action="click->overview-edit#stopPropagation"
-           title="Edit slide">edit</a>
-        <div class="overview-edit__thumb-frame">
-          <div class="overview-edit__thumb slide<%= ' slide--center' if slide.centered? %>">
-            <div class="slide-content">
-              <%== slide.html %>
+    <% @presentation.chapters.each do |chapter| %>
+      <% if chapter.named? %>
+        <div class="overview-chapter" data-overview-edit-target="chapterHeader" data-chapter-slug="<%= chapter.slug %>">
+          <button type="button"
+                  class="overview-chapter__toggle"
+                  aria-expanded="true"
+                  title="Collapse / expand this chapter"
+                  data-action="overview-edit#toggleChapter"
+                  data-chapter-slug="<%= chapter.slug %>">▾</button>
+          <span class="overview-chapter__name"><%= chapter.name %></span>
+          <span class="overview-chapter__count">
+            <%= pluralize(chapter.size, "slide") %> &middot; <%= chapter.first_position %>–<%= chapter.last_position %>
+          </span>
+          <a class="overview-chapter__present"
+             href="<%= presentation_chapter_path(@presentation, chapter_slug: chapter.slug) %>"
+             data-turbo="false"
+             title="Present only this chapter">Present section →</a>
+        </div>
+      <% end %>
+
+      <% chapter.slides.each do |slide| %>
+        <div class="overview-edit__tile theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
+             draggable="true"
+             tabindex="0"
+             data-overview-edit-target="tile"
+             data-position="<%= slide.position %>"
+             data-chapter-slug="<%= chapter.slug %>"
+             data-action="dragstart->overview-edit#dragStart dragover->overview-edit#dragOver drop->overview-edit#drop dragend->overview-edit#dragEnd click->overview-edit#presentSlide">
+          <button type="button"
+                  class="overview-edit__delete"
+                  title="Delete slide"
+                  data-action="click->overview-edit#deleteSlide"
+                  data-position="<%= slide.position %>">×</button>
+          <a class="overview-edit__edit-pill"
+             href="<%= edit_presentation_slide_path(@presentation, n: slide.position) %>"
+             data-turbo="false"
+             data-action="click->overview-edit#stopPropagation"
+             title="Edit slide">edit</a>
+
+          <%# Chapter marker controls. A slide carrying a marker shows the name
+              (click to rename) plus an x to remove the marker without touching
+              the slide; any other slide offers "+ chapter" to open one here. %>
+          <% if slide.chapter %>
+            <span class="overview-edit__chapter is-set">
+              <button type="button"
+                      class="overview-edit__chapter-name"
+                      title="Rename this chapter"
+                      data-action="overview-edit#renameChapter"
+                      data-position="<%= slide.position %>"><%= slide.chapter %></button>
+              <button type="button"
+                      class="overview-edit__chapter-clear"
+                      title="Remove chapter start (keeps the slide)"
+                      data-action="overview-edit#clearChapter"
+                      data-position="<%= slide.position %>">×</button>
+            </span>
+          <% else %>
+            <button type="button"
+                    class="overview-edit__chapter"
+                    title="Start a chapter at this slide"
+                    data-action="overview-edit#startChapter"
+                    data-position="<%= slide.position %>">+ chapter</button>
+          <% end %>
+
+          <div class="overview-edit__thumb-frame">
+            <div class="overview-edit__thumb slide<%= ' slide--center' if slide.centered? %>">
+              <div class="slide-content">
+                <%== slide.html %>
+              </div>
             </div>
           </div>
+          <div class="overview-edit__caption">
+            <span class="overview-edit__num"><%= slide.position %></span>
+            <span class="overview-edit__title"><%= slide.title %></span>
+          </div>
         </div>
-        <div class="overview-edit__caption">
-          <span class="overview-edit__num"><%= slide.position %></span>
-          <span class="overview-edit__title"><%= slide.title %></span>
-        </div>
-      </div>
+      <% end %>
     <% end %>
 
     <button type="button"

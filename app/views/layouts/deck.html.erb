@@ -29,6 +29,11 @@
     data-deck-count-value="<%= @presentation.slides.size %>"
     data-deck-slug-value="<%= @presentation.slug %>"
     data-deck-start-value="<%= (defined?(@start_index) && @start_index) || 0 %>"
+    <%# Set only by ChaptersController — clamps navigation to one chapter. %>
+    <% if @chapter %>
+      data-deck-range-start-value="<%= @chapter.first_position %>"
+      data-deck-range-end-value="<%= @chapter.last_position %>"
+    <% end %>
     data-palette-slides-value="<%= slides_palette_json(@presentation, target: :present).to_json %>"
   >
     <%= yield %>

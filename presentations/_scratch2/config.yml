@@ -1,7 +1,0 @@
----
-theme: terminal
-mode: light
-body_size: small
-fonts: {}
-colors:
-  accent: "#ff0088"

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Deck landing page grid: drag-to-reorder, +Add tile, per-tile delete.
 export default class extends Controller {
-  static targets = ["tile", "add"]
+  static targets = ["tile", "add", "chapterHeader"]
   static values  = {
     slug:       String,
     createUrl:  String,
@@ -11,6 +11,7 @@ export default class extends Controller {
 
   connect() {
     this._dragFromPos = null
+    this._applyCollapsed()
     const items = this._items()
     if (items.length) items[0].focus()
 
@@ -37,9 +38,142 @@ export default class extends Controller {
     this._dragFromPos = null
   }
 
-  // Slide tiles plus the trailing "+ new slide" tile, in grid order.
+  // Slide tiles plus the trailing "+ new slide" tile, in grid order. Tiles
+  // inside a collapsed chapter are excluded: arrow keys shouldn't move focus to
+  // something invisible, and _columns() measures offsetTop, which is 0 for a
+  // display:none tile and would otherwise wreck the row arithmetic.
   _items() {
-    return this.hasAddTarget ? [...this.tileTargets, this.addTarget] : this.tileTargets
+    const tiles = this.tileTargets.filter(t => t.offsetParent !== null)
+    return this.hasAddTarget ? [...tiles, this.addTarget] : tiles
+  }
+
+  // ---- chapters: collapse ---------------------------------------------------
+
+  // Collapsed chapters live in localStorage per deck — there's no database, and
+  // this is view state that shouldn't touch the slide files.
+  get _collapseKey() {
+    return `markdeck:collapsed:${this.slugValue}`
+  }
+
+  _collapsed() {
+    try {
+      const raw = localStorage.getItem(this._collapseKey)
+      return new Set(raw ? JSON.parse(raw) : [])
+    } catch {
+      return new Set()
+    }
+  }
+
+  _saveCollapsed(set) {
+    try {
+      localStorage.setItem(this._collapseKey, JSON.stringify([...set]))
+    } catch (err) {
+      console.warn("could not persist collapsed chapters:", err)
+    }
+  }
+
+  toggleChapter(e) {
+    e.stopPropagation()
+    const slug = e.currentTarget.dataset.chapterSlug
+    const collapsed = this._collapsed()
+    collapsed.has(slug) ? collapsed.delete(slug) : collapsed.add(slug)
+    this._saveCollapsed(collapsed)
+    this._applyCollapsed()
+    // Tiles that just became visible had no layout box, so never got scaled.
+    this._scaleThumbs()
+  }
+
+  _applyCollapsed() {
+    const collapsed = this._collapsed()
+
+    this.tileTargets.forEach(tile => {
+      const slug = tile.dataset.chapterSlug
+      tile.classList.toggle("is-collapsed", !!slug && collapsed.has(slug))
+    })
+
+    this.chapterHeaderTargets.forEach(header => {
+      const isCollapsed = collapsed.has(header.dataset.chapterSlug)
+      header.classList.toggle("is-collapsed", isCollapsed)
+      const toggle = header.querySelector(".overview-chapter__toggle")
+      if (toggle) {
+        toggle.setAttribute("aria-expanded", String(!isCollapsed))
+        toggle.textContent = isCollapsed ? "▸" : "▾"
+      }
+    })
+  }
+
+  // ---- chapters: markers ----------------------------------------------------
+
+  startChapter(e) {
+    e.stopPropagation()
+    this._editChapterName(e.currentTarget, "")
+  }
+
+  renameChapter(e) {
+    e.stopPropagation()
+    this._editChapterName(e.currentTarget.closest(".overview-edit__chapter"), e.currentTarget.textContent.trim())
+  }
+
+  // Swap the control for a text input rather than using prompt(), which blocks
+  // the page and looks nothing like the rest of the UI. Enter commits, Escape
+  // or blurring without a change puts the original control back.
+  _editChapterName(control, current) {
+    const position = control.dataset.position || control.querySelector("[data-position]")?.dataset.position
+    const input = document.createElement("input")
+    input.type = "text"
+    input.className = "overview-edit__chapter-input"
+    input.value = current
+    input.placeholder = "Chapter name"
+    input.setAttribute("aria-label", "Chapter name")
+
+    let settled = false
+    const restore = () => {
+      if (settled) return
+      settled = true
+      input.replaceWith(control)
+    }
+    const commit = () => {
+      if (settled) return
+      const name = input.value.trim()
+      if (!name || name === current) return restore()
+      settled = true
+      this._writeChapter(position, name)
+    }
+
+    input.addEventListener("keydown", (ev) => {
+      ev.stopPropagation()
+      if (ev.key === "Enter") { ev.preventDefault(); commit() }
+      if (ev.key === "Escape") { ev.preventDefault(); restore() }
+    })
+    input.addEventListener("blur", commit)
+    input.addEventListener("click", (ev) => ev.stopPropagation())
+
+    control.replaceWith(input)
+    input.focus()
+    input.select()
+  }
+
+  async clearChapter(e) {
+    e.stopPropagation()
+    await this._writeChapter(e.currentTarget.dataset.position, null)
+  }
+
+  // PATCH with a name opens a chapter at that slide; DELETE removes the marker.
+  // Either way the grouping is derived from the files, so reload to re-render.
+  async _writeChapter(position, name) {
+    const url = `/presentations/${encodeURIComponent(this.slugValue)}/slides/${position}/chapter`
+    try {
+      const res = await fetch(url, {
+        method: name === null ? "DELETE" : "PATCH",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": csrfToken() },
+        body: name === null ? undefined : JSON.stringify({ chapter: { name } }),
+      })
+      if (!res.ok) throw new Error(`chapter HTTP ${res.status}`)
+      window.location.reload()
+    } catch (err) {
+      console.warn("chapter update failed:", err)
+      alert("Could not update the chapter — see console.")
+    }
   }
 
   // .overview-edit__thumb's CSS default (scale(0.18)) is only a rough
@@ -61,7 +195,7 @@ export default class extends Controller {
 
   // Tile click → enter present mode at that slide.
   presentSlide(e) {
-    if (e.target.closest(".overview-edit__delete, .overview-edit__edit-pill")) return
+    if (e.target.closest(".overview-edit__delete, .overview-edit__edit-pill, .overview-edit__chapter, .overview-edit__chapter-input")) return
     const pos = e.currentTarget.dataset.position
     window.location = `/presentations/${this.slugValue}/slides/${pos}`
   }
