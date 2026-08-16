@@ -24,7 +24,12 @@
 
   <body
     class="overflow-hidden m-0 theme-<%= @presentation.theme %> mode-<%= @presentation.mode %>"
-    style="background: var(--app-bg); color: var(--app-fg); font-family: var(--md-font-body), system-ui, sans-serif;"
+    <%# Literal fallbacks matter here: --app-bg/--app-fg are defined only in the
+        compiled Tailwind stylesheet, so if that file fails to load or is stale,
+        this inline declaration becomes invalid and the page falls back to the
+        browser default — white text on white. The deck layout is immune because
+        its --md-* vars are inlined per request in the <style> block below. %>
+    style="background: var(--app-bg, #0a0a0a); color: var(--app-fg, #e5e5e5); font-family: var(--md-font-body), system-ui, sans-serif;"
   >
     <%= yield %>
 
