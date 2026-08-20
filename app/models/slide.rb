@@ -114,6 +114,36 @@ class Slide
     end
   end
 
+  DUPLICATE_SUFFIX = " (Duplicate)"
+  # Only a level-1 heading, matching what #heading (and therefore #title) reads.
+  H1_LINE = /^[ \t]*#[ \t]+(.+?)[ \t]*$/
+
+  # Marks a copied slide so it's tellable apart in the overview and ⌘K. Appends
+  # to whatever #title would actually show: the first h1, else the `label` front
+  # matter. A slide with neither is left alone — its title is positional
+  # ("Slide 7"), so there's nothing meaningful to rename.
+  def self.with_duplicate_title(body)
+    front_matter = body[FRONT_MATTER_PATTERN] || ""
+    rest = body.sub(FRONT_MATTER_PATTERN, "")
+
+    if (heading = rest.match(H1_LINE))
+      # Duplicating a duplicate shouldn't stack suffixes; one marker is enough,
+      # and the copies are already distinguishable by position.
+      return body if heading[1].end_with?(DUPLICATE_SUFFIX)
+
+      insert_at = heading.begin(1) + heading[1].length
+      return "#{front_matter}#{rest[0...insert_at]}#{DUPLICATE_SUFFIX}#{rest[insert_at..]}"
+    end
+
+    label = parse_front_matter(body)&.dig("label")
+    if label.present?
+      return body if label.end_with?(DUPLICATE_SUFFIX)
+      return with_front_matter(body, key: "label", value: "#{label}#{DUPLICATE_SUFFIX}")
+    end
+
+    body
+  end
+
   def self.emit_front_matter(hash)
     # Hash#to_yaml emits its own "---\n" header; we re-format to keep the
     # block compact and predictable across Psych versions.

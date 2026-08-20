@@ -32,7 +32,14 @@
   <main class="overview-page__grid" data-action="keydown->overview-edit#handleKey">
     <% @presentation.chapters.each do |chapter| %>
       <% if chapter.named? %>
-        <div class="overview-chapter" data-overview-edit-target="chapterHeader" data-chapter-slug="<%= chapter.slug %>">
+        <%# Draggable so a whole section can be moved at once: dropping one header
+            on another relocates every slide in it, keeping their internal order. %>
+        <div class="overview-chapter"
+             draggable="true"
+             title="Drag to move this whole section"
+             data-overview-edit-target="chapterHeader"
+             data-chapter-slug="<%= chapter.slug %>"
+             data-action="dragstart->overview-edit#chapterDragStart dragover->overview-edit#chapterDragOver drop->overview-edit#chapterDrop dragend->overview-edit#dragEnd">
           <button type="button"
                   class="overview-chapter__toggle"
                   aria-expanded="true"
@@ -43,9 +50,12 @@
           <span class="overview-chapter__count">
             <%= pluralize(chapter.size, "slide") %> &middot; <%= chapter.first_position %>–<%= chapter.last_position %>
           </span>
+          <%# draggable=false so dragging the link doesn't start a link-drag and
+              hijack the header's own drag. %>
           <a class="overview-chapter__present"
              href="<%= presentation_chapter_path(@presentation, chapter_slug: chapter.slug) %>"
              data-turbo="false"
+             draggable="false"
              title="Present only this chapter">Present section →</a>
         </div>
       <% end %>
@@ -118,7 +128,7 @@
   </main>
 
   <footer class="overview-page__footer">
-    <span>Click a slide to present · drag to reorder · "edit" pill to edit · <kbd>⌘K</kbd> to jump</span>
+    <span>Click a slide to present · drag to reorder · drag a section header to move the whole section · "edit" pill to edit · <kbd>⌘K</kbd> to jump</span>
   </footer>
 
   <%= render "slides/palette" %>

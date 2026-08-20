@@ -183,7 +183,7 @@ def add(argv, flags)
 
   body = read_body(flags)
   chapter = flags["chapter"]
-  body = Slide.with_front_matter(body || "# New slide\n", key: "chapter", value: chapter) if chapter.is_a?(String)
+  body = Slide.with_front_matter(body || Presentation::NEW_SLIDE_BODY, key: "chapter", value: chapter) if chapter.is_a?(String)
 
   slide = presentation.create_slide!(
     after_position: after,

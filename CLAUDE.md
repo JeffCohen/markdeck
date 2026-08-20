@@ -36,7 +36,8 @@ Constraints worth remembering:
 
 - Themes: `minimal`, `editorial`, `terminal`, `aurora`. Modes: `dark`, `light`. Body sizes: `small`, `medium`, `large`. Anything else falls back to a default without complaint.
 - Front matter reads **only** `center`, `label`, and `chapter`. Other keys are dropped.
-- `chapter:` is **sticky** — the slide carrying it opens a section and following slides inherit it until the next marker. `Presentation#chapters` derives the groups; nothing stores them. Chapters drive the overview's collapsible headers, ⌘K grouping, and `/presentations/<deck>/chapters/<slug>` (present one section, navigation clamped to it).
+- `chapter:` is **sticky** — the slide carrying it opens a section and following slides inherit it until the next marker. `Presentation#chapters` derives the groups; nothing stores them.
+- `reorder!` rewrites `chapter:` markers so slides keep the chapter they were in (`preserve_chapters:`, default true). Without it, reordering inside a chapter hands the marker to a different slide and moves the boundary instead of the slides. A slide dropped inside another chapter joins it; one dragged above every chapter joins the leading ungrouped run. `create_slide!` passes `preserve_chapters: false` — a new slide has no marker, so it inherits the chapter it was inserted into. Chapters drive the overview's collapsible headers, ⌘K grouping, and `/presentations/<deck>/chapters/<slug>` (present one section, navigation clamped to it).
 - Slide positions in `bin/deck` are 1-based.
 - Prefix gaps and letter suffixes (`06a-columns.md`) are fine — ordering is a basename sort. `bin/deck renumber` normalizes them only if you want that.
 - One deck slug contains a space (`MPCS 51042`), so quote slug arguments.

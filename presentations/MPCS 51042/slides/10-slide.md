@@ -1,18 +1,18 @@
 ---
-chapter: AI Policy
+chapter: AI
 ---
-# AI Policy
+# AI Background
 
-You can use AI for this course.
-
-You may not use AI during in-class assessments (quizzes and exams)
-
----
-I encourage you to use it to ask questions as you would to me or a TA.
+* Turing
+* Geoffrey Hinton
+* LLM prediction vs Claude coding
 
 ---
 
-BEWARE that AI will...
-  * tell you WAY MORE than you need to know
-  * give you solutions that will probably NOT be acceptable on an assignment, quiz, or exam.
+* Building vs understanding
+* The challenge for academia
+* Why are you here? Describe your ideal future work.
+
+
+
 

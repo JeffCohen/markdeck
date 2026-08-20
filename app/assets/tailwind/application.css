@@ -34,11 +34,8 @@
   transition: stroke-dashoffset 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Overview grid tiles — visible focus ring for keyboard navigation */
-.overview-edit__tile:focus-visible {
-  outline: 2px solid var(--md-accent);
-  outline-offset: 2px;
-}
+/* (Overview tile focus is styled with .is-current further down — one highlight
+   shared by "focused" and "selected", rather than a ring plus a fill.) */
 
 /* Speaker peek — corner notes / next-slide preview, toggled by N/P */
 .speaker-peek {
@@ -430,10 +427,30 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 
 .slide-content hr {
   border: 0;
-  border-top: 1px solid var(--md-muted);
-  opacity: 0.4;
+  /* 2px rather than 1px so the rule survives the thumbnail/preview downscale,
+     and a mixed colour rather than `opacity: 0.4`, which composited --md-muted
+     down to roughly #333 on a dark deck — effectively invisible. */
+  border-top: 2px solid color-mix(in oklab, var(--md-muted) 70%, transparent);
   margin: 1em 0;
 }
+
+/* A muted grey rule reads as nothing against a near-black background, so lift
+   it toward the foreground colour instead of the muted one. Scoped to dark
+   because on a light deck the muted grey already has plenty of contrast. */
+.mode-dark .slide-content hr {
+  border-top-color: color-mix(in oklab, var(--md-fg) 55%, transparent);
+}
+
+/* Every preview surface renders the 1280x720 canvas through a transform scale,
+   which scales the border down with everything else — measured, a 2px rule lands
+   at 1.02px in the editor preview, 0.59px in the next-slide peek and 0.38px in
+   an overview tile, i.e. invisible. Text survives because glyphs are large; a
+   hairline doesn't. Widths below are chosen to land back at ~2 rendered px at
+   each context's actual scale. Present mode needs no entry: it scales the same
+   canvas but at roughly 1:1 or above. */
+.editor__pane--preview .thumb-content hr { border-top-width: 4px; }   /* ~0.51 scale */
+.speaker-peek--preview .thumb-content hr { border-top-width: 7px; }   /* ~0.30 scale */
+.overview-edit__thumb hr { border-top-width: 10px; }                  /* ~0.19 scale */
 
 .slide-content table {
   border-collapse: collapse;
@@ -942,6 +959,18 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 }
 .overview-chapter:first-child { margin-top: 0; }
 
+/* The header is a drag handle for the whole section. */
+.overview-chapter { cursor: grab; }
+.overview-chapter:active { cursor: grabbing; }
+.overview-chapter.is-dragging { opacity: 0.4; }
+.overview-chapter.is-drop-target {
+  outline: 2px dashed var(--app-accent);
+  outline-offset: 4px;
+}
+/* Children keep their own affordance rather than inheriting the grab cursor. */
+.overview-chapter__toggle,
+.overview-chapter__present { cursor: pointer; }
+
 .overview-chapter__toggle {
   background: transparent;
   border: 0;
@@ -1083,6 +1112,27 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   outline-offset: 3px;
 }
 .overview-edit__tile.is-dragging { opacity: 0.35; }
+
+/* THE selection — there is only one, and "focused" and "selected" are the same
+   thing. Both selectors get an identical treatment so that when they coincide
+   (which is almost always: .is-current tracks focus) you see one highlighted
+   tile, not a fill sitting inside a separate focus ring.
+   `outline: none` is safe here because this fill + accent border + inset ring
+   IS the focus indicator; .is-current is applied in JS even when a programmatic
+   focus doesn't satisfy :focus-visible, and :focus-visible covers the reverse
+   case if the JS ever fails. The fill needs real weight — at 12% over a
+   near-black background it was invisible whatever the computed style said. */
+.overview-edit__tile.is-current,
+.overview-edit__tile:focus-visible {
+  outline: none;
+  border-color: var(--app-accent);
+  background: color-mix(in oklab, var(--app-accent) 26%, transparent);
+  box-shadow: inset 0 0 0 1px var(--app-accent);
+}
+.overview-edit__tile.is-current .overview-edit__num,
+.overview-edit__tile.is-current .overview-edit__title,
+.overview-edit__tile:focus-visible .overview-edit__num,
+.overview-edit__tile:focus-visible .overview-edit__title { color: var(--app-accent); }
 
 .overview-edit__delete {
   position: absolute;

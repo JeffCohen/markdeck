@@ -6,7 +6,7 @@ const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
 
 export default class extends Controller {
-  static targets = ["slide", "counter", "total", "help", "progress", "notesDot"]
+  static targets = ["slide", "counter", "total", "help", "progress", "notesDot", "overviewLink"]
   static values = {
     count: Number, index: Number, slug: String, start: Number,
     // 1-based, inclusive. Set only when presenting a single chapter; navigation
@@ -90,6 +90,9 @@ export default class extends Controller {
     if (window.location.hash !== newHash) {
       history.replaceState(null, "", newHash)
     }
+    // Keep the "← overview" link pointing at the slide on screen, so clicking it
+    // lands on the same tile the O shortcut would.
+    if (this.hasOverviewLinkTarget) this.overviewLinkTarget.hash = newHash
     if (document.body.classList.contains("peek-preview")) {
       requestAnimationFrame(() => this.scaleThumbs())
     }
@@ -112,9 +115,11 @@ export default class extends Controller {
   first() { this.show(this.lowIndex) }
   last() { this.show(this.highIndex) }
 
+  // Hand the overview the slide being viewed via the same #N convention the deck
+  // already uses for its own position, so it can open on that tile.
   goToOverview() {
     if (!this.hasSlugValue) return
-    window.location = `/presentations/${this.slugValue}`
+    window.location = `/presentations/${this.slugValue}#${this.indexValue + 1}`
   }
 
   // Fit the current slide's 1280x720 canvas into the viewport, letterboxing on

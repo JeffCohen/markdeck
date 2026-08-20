@@ -11,9 +11,12 @@ export default class extends Controller {
 
   connect() {
     this._dragFromPos = null
+    this._dragChapterSlug = null
     this._applyCollapsed()
-    const items = this._items()
-    if (items.length) items[0].focus()
+    // Listeners first: _selectIncomingSlide() focuses a tile, and the focusin
+    // handler below is what turns focus into a visible selection.
+    this._listenForSelection()
+    this._selectIncomingSlide()
 
     window.addEventListener("resize", this._onResize = () => this._scaleThumbs())
     this._scaleThumbs()
@@ -27,24 +30,99 @@ export default class extends Controller {
     window.addEventListener("drop", this._onDragFinish)
   }
 
+  _listenForSelection() {
+    // Arriving with a different #N while already on this page is a same-document
+    // navigation: connect() doesn't re-run, so re-select explicitly.
+    window.addEventListener("hashchange", this._onHashChange = () => this._selectIncomingSlide())
+
+    // There is ONE selection and it follows focus, so arrowing away from the
+    // slide you arrived on moves the marker rather than leaving two tiles
+    // looking selected. Driven by focusin rather than patched into handleKey so
+    // every route — arrows, Home/End, Tab into a tile's buttons — stays in sync.
+    this.element.addEventListener("focusin", this._onFocusIn = (e) => {
+      const tile = e.target.closest?.('[data-overview-edit-target="tile"]')
+      if (tile) {
+        this._setCurrent(tile)
+      } else if (this.hasAddTarget && this.addTarget.contains(e.target)) {
+        // "+ new slide" isn't a slide; nothing should read as selected.
+        this._setCurrent(null)
+      }
+      // Anything else (⌘K palette, settings dialog) leaves the selection alone.
+    })
+  }
+
+  _setCurrent(tile) {
+    this.tileTargets.forEach(t => {
+      const isCurrent = t === tile
+      t.classList.toggle("is-current", isCurrent)
+      if (isCurrent) {
+        t.setAttribute("aria-current", "true")
+      } else {
+        t.removeAttribute("aria-current")
+      }
+    })
+  }
+
   disconnect() {
     window.removeEventListener("resize", this._onResize)
     window.removeEventListener("dragend", this._onDragFinish)
     window.removeEventListener("drop", this._onDragFinish)
+    window.removeEventListener("hashchange", this._onHashChange)
+    this.element.removeEventListener("focusin", this._onFocusIn)
   }
 
   _clearDragState() {
     this.tileTargets.forEach(t => t.classList.remove("is-dragging", "is-drop-target"))
+    this.chapterHeaderTargets.forEach(h => h.classList.remove("is-dragging", "is-drop-target"))
     this._dragFromPos = null
+    this._dragChapterSlug = null
   }
 
-  // Slide tiles plus the trailing "+ new slide" tile, in grid order. Tiles
-  // inside a collapsed chapter are excluded: arrow keys shouldn't move focus to
-  // something invisible, and _columns() measures offsetTop, which is 0 for a
-  // display:none tile and would otherwise wreck the row arithmetic.
+  // Slide tiles plus the trailing "+ new slide" tile, in grid order. Tiles inside
+  // a collapsed chapter are excluded: arrow keys shouldn't move focus to
+  // something invisible, and a display:none tile reports a zero-sized box, which
+  // would corrupt the row geometry _verticalTarget() measures.
   _items() {
     const tiles = this.tileTargets.filter(t => t.offsetParent !== null)
     return this.hasAddTarget ? [...tiles, this.addTarget] : tiles
+  }
+
+  // Present mode (O / "← overview") and the editor crumb both arrive with #N;
+  // that sets where the selection STARTS. Focusing is what marks it, via the
+  // focusin handler — and the marker class is what makes it visible at all,
+  // since a programmatic focus() on a fresh page load doesn't satisfy
+  // :focus-visible, so the focus ring alone would draw nothing.
+  _selectIncomingSlide() {
+    const target = this._tileFromHash() || this._items()[0]
+    if (!target) return
+
+    // Mark explicitly rather than leaning on the focusin handler: a document
+    // that doesn't have focus yet (page still loading, or opened in a background
+    // tab) updates activeElement without dispatching focus events, which would
+    // leave the deck looking like nothing is selected until you pressed a key.
+    this._setCurrent(this.tileTargets.includes(target) ? target : null)
+    target.focus()
+    target.scrollIntoView({ block: "nearest" })
+  }
+
+  _tileFromHash() {
+    const match = window.location.hash.match(/^#(\d+)$/)
+    if (!match) return null
+
+    const tile = this.tileTargets.find(t => t.dataset.position === match[1])
+    if (!tile) return null
+
+    // Never focus something invisible: if the slide sits in a collapsed
+    // chapter, open that chapter rather than silently focusing a hidden tile.
+    if (tile.offsetParent === null && tile.dataset.chapterSlug) {
+      const collapsed = this._collapsed()
+      collapsed.delete(tile.dataset.chapterSlug)
+      this._saveCollapsed(collapsed)
+      this._applyCollapsed()
+      this._scaleThumbs()
+    }
+
+    return tile
   }
 
   // ---- chapters: collapse ---------------------------------------------------
@@ -215,15 +293,14 @@ export default class extends Controller {
       return
     }
 
-    const cols = this._columns(items)
     const from = current === -1 ? 0 : current
     let next = from
 
     switch (e.key) {
       case "ArrowRight": next = Math.min(items.length - 1, from + 1); break
       case "ArrowLeft": next = Math.max(0, from - 1); break
-      case "ArrowDown": next = Math.min(items.length - 1, from + cols); break
-      case "ArrowUp": next = Math.max(0, from - cols); break
+      case "ArrowDown": next = this._verticalTarget(items, from, 1); break
+      case "ArrowUp": next = this._verticalTarget(items, from, -1); break
       case "Home": next = 0; break
       case "End": next = items.length - 1; break
       default: return
@@ -233,11 +310,35 @@ export default class extends Controller {
     items[next].focus()
   }
 
-  _columns(items) {
-    if (items.length < 2) return 1
-    const firstTop = items[0].offsetTop
-    const nextRow = items.findIndex(t => t.offsetTop !== firstTop)
-    return nextRow === -1 ? items.length : nextRow
+  // Vertical movement cannot be `index +/- columns`. Chapter headers span the
+  // full grid row, so a chapter whose slide count isn't a multiple of the column
+  // count leaves a short row, and the arithmetic walks past the start of the
+  // next one — from the first tile of a 4-wide row in a 5-wide grid it skipped
+  // to the second tile of the row below. Move geometrically instead: go to the
+  // tile in the adjacent row whose horizontal centre is nearest this one, which
+  // also does the right thing for the ragged last row and for collapsed
+  // chapters (whose tiles are filtered out of `items` entirely).
+  _verticalTarget(items, from, direction) {
+    const box = (el) => el.getBoundingClientRect()
+    const origin = box(items[from])
+    const originCentre = origin.left + origin.width / 2
+    const centreOf = (el) => box(el).left + box(el).width / 2
+
+    // Rows share a top edge; allow a couple of pixels of rounding slack.
+    const beyond = items.filter(el => direction > 0
+      ? box(el).top > origin.top + 2
+      : box(el).top < origin.top - 2)
+    if (!beyond.length) return from
+
+    const tops = beyond.map(el => box(el).top)
+    const rowTop = direction > 0 ? Math.min(...tops) : Math.max(...tops)
+    const row = beyond.filter(el => Math.abs(box(el).top - rowTop) <= 2)
+
+    let nearest = row[0]
+    for (const el of row) {
+      if (Math.abs(centreOf(el) - originCentre) < Math.abs(centreOf(nearest) - originCentre)) nearest = el
+    }
+    return items.indexOf(nearest)
   }
 
   // ---- drag-reorder ---------------------------------------------------------
@@ -260,6 +361,10 @@ export default class extends Controller {
 
   drop(e) {
     e.preventDefault()
+    // A section drag only means something when dropped on another section
+    // header; dropping it on a slide is a miss, not a slide reorder.
+    if (this._dragChapterSlug) return this._clearDragState()
+
     const toTile = e.currentTarget
     const toPos = Number(toTile.dataset.position)
     const fromPos = this._dragFromPos
@@ -280,6 +385,69 @@ export default class extends Controller {
 
   dragEnd() {
     this._clearDragState()
+  }
+
+  // ---- chapters: reorder whole sections -------------------------------------
+
+  chapterDragStart(e) {
+    const header = e.currentTarget
+    this._dragChapterSlug = header.dataset.chapterSlug
+    header.classList.add("is-dragging")
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", this._dragChapterSlug)
+  }
+
+  chapterDragOver(e) {
+    if (!this._dragChapterSlug) return
+    if (e.currentTarget.dataset.chapterSlug === this._dragChapterSlug) return
+
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    this.chapterHeaderTargets.forEach(h => h.classList.remove("is-drop-target"))
+    e.currentTarget.classList.add("is-drop-target")
+  }
+
+  chapterDrop(e) {
+    e.preventDefault()
+    const from = this._dragChapterSlug
+    const to = e.currentTarget.dataset.chapterSlug
+    this._clearDragState()
+    if (!from || !to || from === to) return
+
+    const order = this._orderMovingChapter(from, to)
+    if (order) this._submitReorder(order)
+  }
+
+  // Slide order that relocates a whole chapter. Mirrors the tile drop rule so
+  // both gestures feel the same: dragging downward lands after the target,
+  // dragging upward lands before it. Reordering by whole blocks also means the
+  // server sees a multi-slide move, so its per-slide chapter preservation
+  // carries every marker along untouched.
+  _orderMovingChapter(fromSlug, toSlug) {
+    const blocks = this._chapterBlocks()
+    const from = blocks.findIndex(b => b.slug === fromSlug)
+    const to = blocks.findIndex(b => b.slug === toSlug)
+    if (from === -1 || to === -1) return null
+
+    const [moved] = blocks.splice(from, 1)
+    blocks.splice(to, 0, moved)
+    return blocks.flatMap(b => b.positions)
+  }
+
+  // Contiguous runs of slide positions in document order, one per chapter plus
+  // the leading unnamed run. Built from every tile including hidden ones, since
+  // a collapsed chapter still has to appear in the reordered list.
+  _chapterBlocks() {
+    const blocks = []
+
+    this.tileTargets.forEach(tile => {
+      const slug = tile.dataset.chapterSlug || ""
+      const last = blocks[blocks.length - 1]
+      if (!last || last.slug !== slug) blocks.push({ slug, positions: [] })
+      blocks[blocks.length - 1].positions.push(Number(tile.dataset.position))
+    })
+
+    return blocks
   }
 
   async _submitReorder(order) {

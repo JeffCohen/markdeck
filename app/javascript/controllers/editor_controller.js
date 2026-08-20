@@ -12,6 +12,8 @@ export default class extends Controller {
     position:   Number,
     csrf:       String,
     etag:       String,
+    // Presentation::NEW_SLIDE_HEADING — the placeholder to pre-select.
+    placeholderHeading: String,
   }
 
   PREVIEW_DEBOUNCE_MS = 200
@@ -41,10 +43,26 @@ export default class extends Controller {
     // once, so arriving via the "E" shortcut (or any real navigation) still
     // drops the cursor at the end of the markdown rather than wherever the
     // previous visit left it.
-    if (!this._restoreEditorState()) {
+    if (!this._restoreEditorState() && !this._selectPlaceholderHeading()) {
       const end = this.textareaTarget.value.length
       this.textareaTarget.setSelectionRange(end, end)
     }
+  }
+
+  // A slide created with no content of its own arrives holding the placeholder
+  // heading; select just that text (not the "# ") so the first keystroke
+  // replaces it. Ordered after _restoreEditorState so an autosave reload never
+  // yanks a selection over whatever you were actually typing.
+  _selectPlaceholderHeading() {
+    if (!this.hasPlaceholderHeadingValue) return false
+
+    const ta = this.textareaTarget
+    const heading = ta.value.match(/^[ \t]*#[ \t]+(.+?)[ \t]*$/m)
+    if (!heading || heading[1] !== this.placeholderHeadingValue) return false
+
+    const start = heading.index + heading[0].indexOf(heading[1])
+    ta.setSelectionRange(start, start + heading[1].length)
+    return true
   }
 
   disconnect() {
@@ -280,7 +298,7 @@ export default class extends Controller {
   async duplicateSlide() {
     const body = this.textareaTarget.value
     await this.flush()
-    await this._createSlide({ after: this.positionValue, body })
+    await this._createSlide({ after: this.positionValue, body, duplicate: true })
   }
 
   async _createSlide(payload) {

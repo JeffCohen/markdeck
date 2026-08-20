@@ -26,6 +26,9 @@ class SlidesController < ApplicationController
   def create
     after = params[:after].presence&.to_i
     body  = params[:body].presence
+    # A duplicate carries the source slide's body; tag its title so the copy is
+    # distinguishable in the overview and ⌘K.
+    body = Slide.with_duplicate_title(body) if body && params[:duplicate]
     new_slide = @presentation.create_slide!(after_position: after, body: body)
     redirect_to edit_presentation_slide_path(@presentation, n: new_slide.position), status: :see_other
   end

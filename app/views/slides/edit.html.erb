@@ -10,12 +10,15 @@
      data-editor-create-url-value="<%= presentation_slides_path(@presentation) %>"
      data-editor-position-value="<%= @slide.position %>"
      data-editor-etag-value="<%= @slide.etag %>"
+     data-editor-placeholder-heading-value="<%= Presentation::NEW_SLIDE_HEADING %>"
      data-editor-csrf-value="<%= form_authenticity_token %>"
      data-palette-slides-value="<%= slides_palette_json(@presentation, target: :edit).to_json %>">
 
   <header class="editor__topbar">
     <div class="editor__topbar-left">
-      <a href="<%= presentation_path(@presentation) %>" class="editor__crumb" data-turbo="false">← overview</a>
+      <%# #N so the overview opens on the slide being edited, same as pressing O
+          in present mode does. %>
+      <a href="<%= presentation_path(@presentation, anchor: @slide.position) %>" class="editor__crumb" data-turbo="false">← overview</a>
       <span class="editor__deck-title"><%= @presentation.title %></span>
     </div>
 

@@ -18,6 +18,8 @@ Markdown syntax supported (tables, code fences, images, etc).
 
   Chapters give you three things: collapsible section headers in the overview grid, groupings in the ⌘K palette (and the name becomes searchable, so "unix" pulls up the whole section), and a **Present section →** link that scopes presenting to just those slides — arrow keys stop at the section edges and the counter reads `2 / 6`. That link is a normal URL (`/presentations/<deck>/chapters/<chapter-slug>`), so it's worth bookmarking for a single lecture.
 
+  Reordering slides keeps them in their chapter, so you can freely rearrange within a section; dragging a slide into a different section moves it there. To reorder the sections themselves, drag a section's header onto another header — the whole section moves, keeping its slides and their order.
+
   Easiest way to manage them is the overview grid: hover any slide for **+ chapter**, click a chapter name to rename it, or click its **×** to remove the marker — which keeps the slide and folds it into the section above. From the CLI:
 
   ```sh
