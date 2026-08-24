@@ -1,3 +1,0 @@
-# Seven
-
-Body Seven.

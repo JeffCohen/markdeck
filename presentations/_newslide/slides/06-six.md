@@ -1,3 +1,0 @@
-# Six
-
-Body Six.

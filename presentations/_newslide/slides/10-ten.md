@@ -1,3 +1,0 @@
-# Ten
-
-Body Ten.
