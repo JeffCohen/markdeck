@@ -387,6 +387,45 @@ export default class extends Controller {
     this._clearDragState()
   }
 
+  // ---- reordering without drag ----------------------------------------------
+  // HTML5 drag events are never produced by touch in iOS Safari, so on a tablet
+  // the drag gestures below are dead and these buttons are the ONLY way to
+  // reorder anything.
+
+  moveSlide(e) {
+    e.stopPropagation()
+    const from = Number(e.currentTarget.dataset.position)
+    const to = from + Number(e.currentTarget.dataset.delta)
+    const total = this.tileTargets.length
+    if (!from || to < 1 || to > total) return
+
+    // Same splice-out-then-insert the drop handler uses, so a nudge and a drag
+    // of one position produce an identical request.
+    const order = Array.from({ length: total }, (_, i) => i + 1)
+    order.splice(from - 1, 1)
+    order.splice(to - 1, 0, from)
+    this._submitReorder(order)
+  }
+
+  moveChapter(e) {
+    e.stopPropagation()
+    const slug = e.currentTarget.dataset.chapterSlug
+    const delta = Number(e.currentTarget.dataset.delta)
+    const blocks = this._chapterBlocks()
+    const from = blocks.findIndex(b => b.slug === slug)
+    const to = from + delta
+    if (from === -1) return
+
+    // The leading unnamed run has to stay first: its slides have no marker, so
+    // anything above the first chapter would be swallowed by whatever follows.
+    const floor = blocks.length && blocks[0].slug === "" ? 1 : 0
+    if (to < floor || to >= blocks.length) return
+
+    const reordered = [...blocks]
+    ;[reordered[from], reordered[to]] = [reordered[to], reordered[from]]
+    this._submitReorder(reordered.flatMap(b => b.positions))
+  }
+
   // ---- chapters: reorder whole sections -------------------------------------
 
   chapterDragStart(e) {

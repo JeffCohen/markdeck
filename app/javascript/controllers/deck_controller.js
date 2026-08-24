@@ -5,6 +5,9 @@ import { Controller } from "@hotwired/stimulus"
 const SLIDE_WIDTH = 1280
 const SLIDE_HEIGHT = 720
 
+// Horizontal travel before a touch counts as a swipe rather than a tap.
+const SWIPE_MIN_PX = 40
+
 export default class extends Controller {
   static targets = ["slide", "counter", "total", "help", "progress", "notesDot", "overviewLink"]
   static values = {
@@ -108,6 +111,45 @@ export default class extends Controller {
         window.mermaid.run({ nodes: pending }).catch(() => {})
       }
     }
+  }
+
+  // ---- touch / pointer navigation -------------------------------------------
+  // Present mode was keyboard-only: next()/prev() were reachable from handleKey
+  // and nothing else, so on a tablet with no hardware keyboard there was no way
+  // to advance a slide at all.
+
+  // Tap the left third to go back, anywhere else to go forward — the convention
+  // most slide and reader apps use. Taps on links or buttons inside a slide are
+  // left alone so slide content stays clickable.
+  tapNavigate(e) {
+    if (this._swipeHandled) { this._swipeHandled = false; return }
+    if (e.target.closest("a, button, input, textarea, select, label, summary")) return
+
+    if (e.clientX < window.innerWidth / 3) this.prev()
+    else this.next()
+  }
+
+  touchStart(e) {
+    const touch = e.changedTouches && e.changedTouches[0]
+    this._touchOrigin = touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+
+  // A horizontal swipe navigates; anything mostly-vertical or too short is left
+  // for the tap handler (or ignored), so scrolling a tall slide still works.
+  touchEnd(e) {
+    const origin = this._touchOrigin
+    this._touchOrigin = null
+    const touch = e.changedTouches && e.changedTouches[0]
+    if (!origin || !touch) return
+
+    const dx = touch.clientX - origin.x
+    const dy = touch.clientY - origin.y
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) <= Math.abs(dy)) return
+
+    // Stop the click that iOS synthesises after a tap from double-navigating.
+    this._swipeHandled = true
+    if (dx < 0) this.next()
+    else this.prev()
   }
 
   next() { this.show(this.indexValue + 1) }

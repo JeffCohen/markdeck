@@ -19,6 +19,9 @@ The three models in `app/models` are plain Ruby wrappers over those files: `Pres
 bin/deck list                                  # all decks
 bin/deck list welcome                          # slides with their positions
 bin/deck cat welcome 3                         # read slide 3
+bin/deck cat welcome                           # whole deck, each slide headed by position/chapter/title
+bin/deck cat welcome 3-7                       # a slide range
+bin/deck cat welcome --chapter="Week 6"        # one chapter (name or slug)
 printf '# Title\n' | bin/deck add welcome --after=2 --stem=agenda --file=-
 bin/deck mv welcome 7 2
 bin/deck set welcome theme=aurora mode=light

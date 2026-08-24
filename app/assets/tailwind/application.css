@@ -971,6 +971,44 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .overview-chapter__toggle,
 .overview-chapter__present { cursor: pointer; }
 
+/* Section up/down — the touch-reachable equivalent of dragging the header. */
+.overview-chapter__move {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 0.8;
+}
+.overview-chapter__move button {
+  background: transparent;
+  border: 0;
+  padding: 0 0.15rem;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+.overview-chapter__move button:hover { color: var(--app-accent); }
+
+/* Slide move controls, flanking the position number in the caption. Quiet until
+   the tile is hovered or focused so they don't compete with the thumbnail —
+   except on touch, see the (hover: none) block below. */
+.overview-edit__move {
+  background: transparent;
+  border: 0;
+  padding: 0 0.2rem;
+  font-family: var(--md-font-mono);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--app-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+.overview-edit__tile:hover .overview-edit__move,
+.overview-edit__tile:focus-visible .overview-edit__move,
+.overview-edit__tile.is-current .overview-edit__move { opacity: 1; }
+.overview-edit__move:hover { color: var(--app-accent); }
+
+
 .overview-chapter__toggle {
   background: transparent;
   border: 0;
@@ -1418,4 +1456,19 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   font-size: 11px;
   font-family: var(--md-font-mono);
   color: var(--app-muted);
+}
+
+/* ===== Touch devices =====
+   A touch device has no hover, so every control that reveals itself on hover is
+   simply unreachable there — the edit pill and delete button included, which
+   predate this. Must live at the very end of the file: these rules carry the
+   same specificity as the `opacity: 0` defaults they override, so source order
+   is the only thing deciding the winner. */
+@media (hover: none) {
+  .overview-edit__delete,
+  .overview-edit__edit-pill,
+  .overview-edit__chapter,
+  .overview-edit__move {
+    opacity: 1;
+  }
 }

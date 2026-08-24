@@ -46,6 +46,16 @@
                   title="Collapse / expand this chapter"
                   data-action="overview-edit#toggleChapter"
                   data-chapter-slug="<%= chapter.slug %>">▾</button>
+          <%# Non-drag section reordering: iOS Safari never fires HTML5 drag events
+              from touch, so the header drag is unusable on a tablet. %>
+          <span class="overview-chapter__move">
+            <button type="button" title="Move this section earlier"
+                    data-action="overview-edit#moveChapter"
+                    data-chapter-slug="<%= chapter.slug %>" data-delta="-1">▲</button>
+            <button type="button" title="Move this section later"
+                    data-action="overview-edit#moveChapter"
+                    data-chapter-slug="<%= chapter.slug %>" data-delta="1">▼</button>
+          </span>
           <span class="overview-chapter__name"><%= chapter.name %></span>
           <span class="overview-chapter__count">
             <%= pluralize(chapter.size, "slide") %> &middot; <%= chapter.first_position %>–<%= chapter.last_position %>
@@ -111,7 +121,15 @@
             </div>
           </div>
           <div class="overview-edit__caption">
+            <%# Same reason as the chapter controls: drag-to-reorder does not
+                exist on touch, so every reorder needs a tappable equivalent. %>
+            <button type="button" class="overview-edit__move" title="Move this slide earlier"
+                    data-action="overview-edit#moveSlide"
+                    data-position="<%= slide.position %>" data-delta="-1">‹</button>
             <span class="overview-edit__num"><%= slide.position %></span>
+            <button type="button" class="overview-edit__move" title="Move this slide later"
+                    data-action="overview-edit#moveSlide"
+                    data-position="<%= slide.position %>" data-delta="1">›</button>
             <span class="overview-edit__title"><%= slide.title %></span>
           </div>
         </div>

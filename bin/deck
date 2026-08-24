@@ -15,7 +15,10 @@ USAGE = <<~TEXT
   Reading
     list                          all decks
     list SLUG                     slides in a deck, with positions
+    cat SLUG                      raw markdown of the whole deck
     cat SLUG N                    raw markdown of slide N
+    cat SLUG FROM-TO              raw markdown of a slide range
+    cat SLUG --chapter=NAME       raw markdown of one chapter (name or slug)
     render SLUG N                 rendered HTML of slide N
     validate SLUG                 check a deck for problems (non-zero exit on failure)
 
@@ -117,9 +120,66 @@ def list(argv)
   end
 end
 
-def cat(argv)
+# Dumps slide sources. Anything wider than a single explicitly numbered slide is
+# preceded by a header comment carrying position, chapter and title, so slide
+# numbers survive a copy-paste into a chat and can still be cited afterwards.
+def cat(argv, flags)
   presentation = find_deck!(argv.shift)
-  print find_slide!(presentation, argv.shift).markdown
+  selector = argv.shift
+  chosen = select_slides!(presentation, selector, flags)
+
+  # `cat SLUG N` stays bare — reading one slide shouldn't gain decoration.
+  if selector.to_s.match?(/\A\d+\z/)
+    print chosen.first.markdown
+    return
+  end
+
+  chapters = effective_chapters(presentation)
+
+  chosen.each_with_index do |slide, index|
+    puts if index.positive?
+    parts = ["slide #{slide.position}"]
+    parts << "chapter: #{chapters[slide.position]}" if chapters[slide.position]
+    parts << slide.title
+    puts "<!-- #{parts.join(' | ')} -->"
+
+    body = slide.markdown
+    print body
+    puts unless body.end_with?("\n")
+  end
+end
+
+def select_slides!(presentation, selector, flags)
+  if (wanted = flags["chapter"])
+    abort!("--chapter needs a name, e.g. --chapter=\"Week 1 Content\"") unless wanted.is_a?(String)
+    chapter = presentation.named_chapters.find { |c| c.slug == wanted || c.name.casecmp?(wanted) }
+    abort!("no chapter #{wanted.inspect} in #{presentation.slug} — see `bin/deck chapters #{presentation.slug.inspect}`") unless chapter
+    return chapter.slides
+  end
+
+  return presentation.slides if selector.nil?
+
+  case selector
+  when /\A\d+\z/
+    [find_slide!(presentation, selector)]
+  when /\A(\d+)-(\d+)\z/
+    from = Regexp.last_match(1).to_i
+    to = Regexp.last_match(2).to_i
+    size = presentation.slides.size
+    abort!("range #{selector} runs backwards") if from > to
+    abort!("range #{selector} is outside 1-#{size}") unless from >= 1 && to <= size
+    presentation.slides[(from - 1)..(to - 1)]
+  else
+    abort!("expected a slide number, a range like 10-14, or --chapter=NAME")
+  end
+end
+
+# Position => the chapter that slide actually belongs to, inherited markers
+# included.
+def effective_chapters(presentation)
+  presentation.chapters.each_with_object({}) do |chapter, map|
+    chapter.slides.each { |slide| map[slide.position] = chapter.name }
+  end
 end
 
 def chapters(argv)
@@ -377,7 +437,7 @@ flags = extract_flags!(argv)
 begin
   case command
   when "list" then list(argv)
-  when "cat" then cat(argv)
+  when "cat" then cat(argv, flags)
   when "render" then render(argv)
   when "chapters" then chapters(argv)
   when "chapter"
