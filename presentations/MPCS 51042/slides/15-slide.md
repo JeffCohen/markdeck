@@ -1,3 +1,3 @@
-# Memory Managment
+# Memory Locations
 
 

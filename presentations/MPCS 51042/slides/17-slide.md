@@ -1,2 +1,2 @@
-# Data Types
+# Data Structures
 

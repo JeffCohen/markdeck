@@ -1,3 +1,17 @@
-# Memory Locations
+# Abstractions
+
+[Image of Red pill vs Blue pill]
+
+Binary can represent:
+
+* a monochrome pixel
+* an RGB pixel
+* text (ASCII, Unicode, etc.)
+* photos
+* music
+
+The key is "Agreement In Advance".
+
+
 
 
