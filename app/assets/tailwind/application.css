@@ -1471,4 +1471,15 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   .overview-edit__move {
     opacity: 1;
   }
+
+  /* Present mode's chrome sits at opacity 0.3 and brightens on hover, which
+     never happens on a touchscreen — leaving the only keyboard-free route back
+     to the overview permanently faint and 16px tall, in the very corner of the
+     screen. The negative margin cancels the padding so the text stays exactly
+     where it was; only the hit area grows, to ~44px. */
+  [data-deck-target="overviewLink"] {
+    opacity: 0.85;
+    padding: 14px 16px;
+    margin: -14px -16px;
+  }
 }
