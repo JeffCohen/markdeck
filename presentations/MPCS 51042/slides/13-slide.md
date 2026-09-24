@@ -1,3 +1,0 @@
-# Binary, Octal, and Hex
-
-

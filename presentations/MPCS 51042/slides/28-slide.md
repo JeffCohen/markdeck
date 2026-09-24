@@ -1,17 +1,8 @@
-# Rebuild a classic structure
+# Classic Structures
 
-*CHALLENGE*: Define a class `MyList` that behaves as shown below.
+Python's most popular structures:
 
-*CONSTRAINT*: You may **not** use any of Python's built-in collection classes within your class definition.  You cannot use an array, list, dictionary, etc.
 
-``` python
-
-x = MyList()
-x.append(5)
-x.append(3)
-x.append(10)
-
-print(x[0])   # 5
-print(x[-1])  # 10
-```
-
+* Strings
+* Lists
+* Dictionaries

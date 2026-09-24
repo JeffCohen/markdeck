@@ -1,8 +1,13 @@
-# Classic Structures
+---
+chapter: Week 2
+---
+# Week 2
 
-Python's most popular structures:
+* Rebuilding classic data structures
+* Standard I/O in Python
+* File I/O in Python
+* Standard coding styles
 
 
-* Strings
-* Lists
-* Dictionaries
+
+

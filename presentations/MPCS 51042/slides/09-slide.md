@@ -1,23 +1,18 @@
-# Programming Essentials
+---
+chapter: AI
+---
+# AI Background
+
+* Turing
+* Geoffrey Hinton
+* LLM prediction vs Claude coding
+
+---
+
+* Building vs understanding
+* The challenge for academia
+* Why are you here? Describe your ideal future work.
 
 
-<div class="cols accent pt-8">
 
-* Architecture
-* Engineering
-* Observability
-* Resource Management
-* Instructions vs Data
-* Notion of Time
-<!-- col -->
-* Determinism
-* Input -> Processing -> Output
-* Quality Control
-* Deployment
-* Complexity Analysis
-* Metaprogramming
 
-</div>
-
-<hr>
-<p class="text-center">History and Chesterton's Fence</p>
