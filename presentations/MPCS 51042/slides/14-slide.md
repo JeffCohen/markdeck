@@ -1,7 +1,5 @@
 # Abstractions
 
-[Image of Red pill vs Blue pill]
-
 Binary can represent:
 
 * a monochrome pixel

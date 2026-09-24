@@ -11,4 +11,4 @@ colors:
   accent: "#60a5fa"
   muted: "#737373"
   highlight: "#60a5fa"
-body_size: large
+body_size: medium

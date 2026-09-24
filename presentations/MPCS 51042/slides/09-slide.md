@@ -21,5 +21,3 @@
 
 <hr>
 <p class="text-center">History and Chesterton's Fence</p>
-
-
