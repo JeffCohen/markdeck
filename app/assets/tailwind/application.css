@@ -146,6 +146,7 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
 .thumb-preview .thumb-content pre { font-size: 20px; line-height: 1.5; padding: 0.7em 1em; }
 .thumb-preview .thumb-content pre.mermaid { font-size: 16px; }
 .thumb-preview .thumb-content code { font-size: 22px; }
+.thumb-preview .thumb-content :is(h1, h2, h3) code { font-size: inherit; }
 .thumb-preview .thumb-content img:not(.fill):not(.fill-below) { max-height: 360px; }
 
 .thumb-preview .thumb-content.slide--center {
@@ -478,6 +479,11 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   background: color-mix(in oklab, var(--md-fg) 10%, transparent);
   padding: 0.1em 0.35em;
   border-radius: 4px;
+}
+
+/* Inline code in a heading matches the heading's size */
+.slide-content :is(h1, h2, h3, h4) code {
+  font-size: inherit;
 }
 
 /* Code blocks: drop inline-code styling, apply block treatment */
