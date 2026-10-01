@@ -1,6 +1,10 @@
 <div class="deck">
-  <% @presentation.slides.each do |slide| %>
-    <%= render "presentations/slide", presentation: @presentation, slide: slide %>
+  <% @presentation.parts.each do |part| %>
+    <% part.chapters.each do |chapter| %>
+      <% chapter.slides.each do |slide| %>
+        <%= render "presentations/slide", presentation: @presentation, slide: slide, part: part, chapter: chapter %>
+      <% end %>
+    <% end %>
   <% end %>
 
   <%= render "presentations/chrome", presentation: @presentation %>

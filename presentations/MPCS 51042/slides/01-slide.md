@@ -1,10 +1,11 @@
 ---
 chapter: Course Introduction
+part: Week 1
 ---
 # MPCS 51042
 ## Python Programming
 
-**Instructor: Jeffrey Cohen. Thursdays 6pm-8pm**
+**Instructor: Jeffrey Cohen. Thursdays 6pm-:8:30pm**
 
 I expect that you already know the basics of Python syntax, how to write a basic for loop, how to define functions.
 

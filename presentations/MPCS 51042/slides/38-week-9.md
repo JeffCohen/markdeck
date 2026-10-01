@@ -1,5 +1,5 @@
 ---
-chapter: Week 9
+part: Week 9
 ---
 # Week 9
 

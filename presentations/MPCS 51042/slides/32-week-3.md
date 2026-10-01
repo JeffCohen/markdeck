@@ -1,5 +1,5 @@
 ---
-chapter: Week 3
+part: Week 3
 ---
 # Week 3
 

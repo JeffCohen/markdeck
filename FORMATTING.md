@@ -4,11 +4,12 @@ Markdown syntax supported (tables, code fences, images, etc).
 
 ## Extras
 
-- **Front matter** (top of file, YAML, only these 3 keys):
+- **Front matter** (top of file, YAML, only these 4 keys):
   ```
   ---
   center: true
   label: Intro
+  part: Week 1
   chapter: Setup
   ---
   ```
@@ -26,6 +27,17 @@ Markdown syntax supported (tables, code fences, images, etc).
   bin/deck chapters welcome              # sections with their slide ranges
   bin/deck chapter welcome 6 "Week 6"    # start a section at slide 6
   bin/deck unchapter welcome 6           # remove the marker, keep the slide
+  ```
+- **`part`** — the level above chapters: a part holds chapters, the way a week holds the sections taught in it. **Sticky** like `chapter:`, and a part marker also **closes the running chapter** — chapters never span two parts, and slides after a part marker belong to no chapter until the next `chapter:` marker. A slide can carry both keys to open a part and its first chapter at once.
+
+  Parts get a heavier header above their chapter headers in the overview (collapsing it hides the whole part), a level above chapters in the ⌘K palette ("week 1" pulls up the whole part), and a **Present part →** link at `/presentations/<deck>/parts/<part-slug>`. Printing from that link (⌘P → Save as PDF) exports just the part — the same works from a chapter's **Present section →** link. While presenting, the progress ring and counter track the current part — `22 / 27` is slide 22 of the week, not the deck — or the current chapter for slides outside any part.
+
+  Dragging a slide into another part moves it into that part and chapter. Chapter headers can be dragged or nudged only within their own part. From the CLI:
+
+  ```sh
+  bin/deck parts welcome                 # parts, their chapters, and slide ranges
+  bin/deck part welcome 1 "Week 1"       # start a part at slide 1
+  bin/deck unpart welcome 1              # remove the marker, keep the slide
   ```
 - **Speaker notes**: stripped from the rendered slide, shown via the notes peek (`N` key). Two forms:
   ```

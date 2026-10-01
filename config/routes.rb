@@ -19,9 +19,11 @@ Rails.application.routes.draw do
       # on slides: PATCH opens a chapter here, DELETE removes the marker while
       # leaving the slide alone.
       resource :chapter, only: %i[update destroy], module: :slides
+      resource :part, only: %i[update destroy], module: :slides
     end
 
-    # Presenting a single chapter — a scoped view of the deck.
+    # Presenting a single part or chapter — a scoped view of the deck.
+    resources :parts, only: :show, param: :part_slug
     resources :chapters, only: :show, param: :chapter_slug
 
     resource  :slide_order, only: :update

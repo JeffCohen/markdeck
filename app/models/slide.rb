@@ -7,7 +7,7 @@ class Slide
   NOTES_PATTERN        = /<!--\s*notes\s*(.*?)-->/m
   CENTER_PATTERN       = /<!--\s*center\s*-->/
 
-  PERMITTED_FRONT_MATTER_KEYS = %w[center label chapter].freeze
+  PERMITTED_FRONT_MATTER_KEYS = %w[center label chapter part].freeze
 
   attr_reader :index, :source_path, :slug
 
@@ -44,6 +44,10 @@ class Slide
 
   def chapter
     front_matter["chapter"].presence
+  end
+
+  def part
+    front_matter["part"].presence
   end
 
   def title

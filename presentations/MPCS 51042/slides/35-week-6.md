@@ -1,5 +1,5 @@
 ---
-chapter: Week 6
+part: Week 6
 ---
 # Week 6
 

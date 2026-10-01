@@ -28,5 +28,14 @@
            placeholder="(optional grouping)">
   </label>
 
+  <label class="editor__attr">
+    <span class="editor__attr-label">Part</span>
+    <input type="text"
+           data-editor-target="partInput"
+           data-action="change->editor#setPart"
+           value="<%= slide.part %>"
+           placeholder="(groups chapters)">
+  </label>
+
   <span class="editor__attrs-hint">Front-matter at the top of the file.</span>
 </div>

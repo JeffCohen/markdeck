@@ -1,5 +1,5 @@
 ---
-chapter: Week 8
+part: Week 8
 ---
 # Week 8
 

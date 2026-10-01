@@ -28,11 +28,29 @@ export default class extends Controller {
       : this.countValue - 1
   }
 
-  get rangeLength() {
-    return this.highIndex - this.lowIndex + 1
+  // Inclusive 0-based bounds the counter and ring measure against. Presenting
+  // one part or chapter, that's the navigable range; presenting the whole deck,
+  // it's the part the current slide belongs to (or its chapter, outside any
+  // part), so the ring tracks the lecture being taught while navigation stays
+  // deck-wide.
+  progressBounds(idx) {
+    const el = this.slideTargets[idx]
+    const scoped = this.hasRangeStartValue && this.rangeStartValue > 0
+    if (scoped || !el) return [this.lowIndex, this.highIndex]
+
+    const { partStart, partEnd, chapterStart, chapterEnd } = el.dataset
+    if (partStart !== undefined) return [parseInt(partStart, 10), parseInt(partEnd, 10)]
+    if (chapterStart !== undefined) return [parseInt(chapterStart, 10), parseInt(chapterEnd, 10)]
+    return [this.lowIndex, this.highIndex]
   }
 
   connect() {
+    // Presenting one part or chapter: tag everything outside it so ⌘P → Save as
+    // PDF exports just that section (see the print rules in application.css).
+    this.slideTargets.forEach((el, i) => {
+      el.classList.toggle("is-out-of-range", i < this.lowIndex || i > this.highIndex)
+    })
+
     const hashed = this.readHash()
     this.indexValue = window.location.hash ? hashed : (this.hasStartValue ? this.startValue : hashed)
     this.show(this.indexValue)
@@ -79,14 +97,16 @@ export default class extends Controller {
     })
     // The slide that just became current has a layout box for the first time.
     this.scaleSlides()
-    // Counter and progress read relative to the range, so a chapter shows
-    // "3 / 6" rather than the slide's position in the whole deck.
-    if (this.hasCounterTarget) this.counterTarget.textContent = String(idx - this.lowIndex + 1)
-    if (this.hasTotalTarget) this.totalTarget.textContent = String(this.rangeLength)
-    if (this.hasProgressTarget && this.rangeLength > 0) {
+    // Counter and progress read relative to the current chapter, so a chapter
+    // shows "3 / 6" rather than the slide's position in the whole deck.
+    const [low, high] = this.progressBounds(idx)
+    const length = high - low + 1
+    if (this.hasCounterTarget) this.counterTarget.textContent = String(idx - low + 1)
+    if (this.hasTotalTarget) this.totalTarget.textContent = String(length)
+    if (this.hasProgressTarget && length > 0) {
       const r = parseFloat(this.progressTarget.getAttribute("r")) || 18
       const circumference = 2 * Math.PI * r
-      const pct = this.rangeLength === 1 ? 1 : (idx - this.lowIndex) / (this.rangeLength - 1)
+      const pct = length === 1 ? 1 : (idx - low) / (length - 1)
       this.progressTarget.style.strokeDashoffset = String(circumference * (1 - pct))
     }
     const newHash = `#${idx + 1}`

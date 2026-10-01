@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 // Drives the per-slide editor: debounced live preview + auto-save,
 // attribute toggles, and Cmd/Ctrl+S immediate save.
 export default class extends Controller {
-  static targets = ["textarea", "preview", "previewSlide", "status", "labelInput", "chapterInput"]
+  static targets = ["textarea", "preview", "previewSlide", "status", "labelInput", "chapterInput", "partInput"]
   static values = {
     previewUrl: String,
     saveUrl:    String,
@@ -93,6 +93,11 @@ export default class extends Controller {
 
   setChapter(e) {
     this._rewriteFrontMatter("chapter", e.target.value)
+    this._fireInput()
+  }
+
+  setPart(e) {
+    this._rewriteFrontMatter("part", e.target.value)
     this._fireInput()
   }
 
@@ -463,7 +468,7 @@ export default class extends Controller {
   }
 }
 
-const ALLOWED_KEYS = ["center", "label", "chapter"]
+const ALLOWED_KEYS = ["center", "label", "chapter", "part"]
 const FRONT_MATTER_RE  = /^---\s*\n([\s\S]*?)\n---\s*\n?/
 const CENTER_COMMENT_RE = /<!--\s*center\s*-->/g
 

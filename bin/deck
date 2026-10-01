@@ -19,18 +19,23 @@ USAGE = <<~TEXT
     cat SLUG N                    raw markdown of slide N
     cat SLUG FROM-TO              raw markdown of a slide range
     cat SLUG --chapter=NAME       raw markdown of one chapter (name or slug)
+    cat SLUG --part=NAME          raw markdown of one part (name or slug)
     render SLUG N                 rendered HTML of slide N
     validate SLUG                 check a deck for problems (non-zero exit on failure)
 
   Structure
     new SLUG [--title=] [--theme=] [--mode=] [--body-size=]
-    add SLUG [--after=N] [--stem=name] [--chapter=Name] [--file=PATH|-]
+    add SLUG [--after=N] [--stem=name] [--part=Name] [--chapter=Name] [--file=PATH|-]
     write SLUG N [--file=PATH|-]  replace slide N's body
     mv SLUG FROM TO               move slide FROM to position TO
     rm SLUG N                     delete slide N
     renumber SLUG                 rewrite NN- prefixes contiguously
 
-  Chapters (sticky: a marker opens a chapter, later slides inherit it)
+  Parts & chapters (sticky: a marker opens a group, later slides inherit it;
+  a part holds chapters, and a part marker closes the running chapter)
+    parts SLUG                    parts with their chapters and slide ranges
+    part SLUG N NAME              start a part at slide N
+    unpart SLUG N                 remove slide N's part marker
     chapters SLUG                 chapters with their slide ranges
     chapter SLUG N NAME           start a chapter at slide N
     unchapter SLUG N              remove slide N's chapter marker
@@ -88,6 +93,7 @@ end
 
 def describe_slide(slide)
   bits = ["#{slide.position.to_s.rjust(3)}  #{slide.basename.ljust(32)} #{slide.title}"]
+  bits << "[part: #{slide.part}]" if slide.part
   bits << "[chapter: #{slide.chapter}]" if slide.chapter
   bits << "[label: #{slide.label}]" if slide.label
   bits << "[centered]" if slide.centered?
@@ -111,17 +117,20 @@ def list(argv)
          "(#{presentation.theme}/#{presentation.mode}, body #{presentation.body_size})"
     puts "(no slides yet)" if presentation.slides.empty?
 
-    # Grouped by chapter so the inherited grouping is visible: which slides a
-    # marker actually covers isn't obvious from the files alone.
-    presentation.chapters.each do |chapter|
-      puts "  — #{chapter.name} —" if chapter.named?
-      chapter.slides.each { |slide| puts describe_slide(slide) }
+    # Grouped by part and chapter so the inherited grouping is visible: which
+    # slides a marker actually covers isn't obvious from the files alone.
+    presentation.parts.each do |part|
+      puts "  ══ #{part.name} ══" if part.named?
+      part.chapters.each do |chapter|
+        puts "  — #{chapter.name} —" if chapter.named?
+        chapter.slides.each { |slide| puts describe_slide(slide) }
+      end
     end
   end
 end
 
 # Dumps slide sources. Anything wider than a single explicitly numbered slide is
-# preceded by a header comment carrying position, chapter and title, so slide
+# preceded by a header comment carrying position, part, chapter and title, so slide
 # numbers survive a copy-paste into a chat and can still be cited afterwards.
 def cat(argv, flags)
   presentation = find_deck!(argv.shift)
@@ -134,14 +143,16 @@ def cat(argv, flags)
     return
   end
 
-  chapters = effective_chapters(presentation)
+  groups = effective_groups(presentation)
 
   chosen.each_with_index do |slide, index|
     puts if index.positive?
-    parts = ["slide #{slide.position}"]
-    parts << "chapter: #{chapters[slide.position]}" if chapters[slide.position]
-    parts << slide.title
-    puts "<!-- #{parts.join(' | ')} -->"
+    part, chapter = groups[slide.position]
+    bits = ["slide #{slide.position}"]
+    bits << "part: #{part}" if part
+    bits << "chapter: #{chapter}" if chapter
+    bits << slide.title
+    puts "<!-- #{bits.join(' | ')} -->"
 
     body = slide.markdown
     print body
@@ -150,6 +161,13 @@ def cat(argv, flags)
 end
 
 def select_slides!(presentation, selector, flags)
+  if (wanted = flags["part"])
+    abort!("--part needs a name, e.g. --part=\"Week 1\"") unless wanted.is_a?(String)
+    part = presentation.named_parts.find { |p| p.slug == wanted || p.name.casecmp?(wanted) }
+    abort!("no part #{wanted.inspect} in #{presentation.slug} — see `bin/deck parts #{presentation.slug.inspect}`") unless part
+    return part.slides
+  end
+
   if (wanted = flags["chapter"])
     abort!("--chapter needs a name, e.g. --chapter=\"Week 1 Content\"") unless wanted.is_a?(String)
     chapter = presentation.named_chapters.find { |c| c.slug == wanted || c.name.casecmp?(wanted) }
@@ -170,15 +188,40 @@ def select_slides!(presentation, selector, flags)
     abort!("range #{selector} is outside 1-#{size}") unless from >= 1 && to <= size
     presentation.slides[(from - 1)..(to - 1)]
   else
-    abort!("expected a slide number, a range like 10-14, or --chapter=NAME")
+    abort!("expected a slide number, a range like 10-14, --part=NAME or --chapter=NAME")
   end
 end
 
-# Position => the chapter that slide actually belongs to, inherited markers
+# Position => [part, chapter] that slide actually belongs to, inherited markers
 # included.
-def effective_chapters(presentation)
-  presentation.chapters.each_with_object({}) do |chapter, map|
-    chapter.slides.each { |slide| map[slide.position] = chapter.name }
+def effective_groups(presentation)
+  presentation.parts.each_with_object({}) do |part, map|
+    part.chapters.each do |chapter|
+      chapter.slides.each { |slide| map[slide.position] = [part.name, chapter.name] }
+    end
+  end
+end
+
+def group_range(group)
+  group.size == 1 ? group.first_position.to_s : "#{group.first_position}-#{group.last_position}"
+end
+
+def parts(argv)
+  presentation = find_deck!(argv.shift)
+  groups = presentation.parts
+
+  if groups.none?(&:named?)
+    puts "#{presentation.slug}: no parts yet " \
+         "(add one with `bin/deck part #{presentation.slug.inspect} N \"Name\"`)"
+    return
+  end
+
+  groups.each do |part|
+    name = part.named? ? part.name : "(no part)"
+    puts "#{group_range(part).ljust(8)} #{name.ljust(34)} #{part.size} slide(s)#{"  /parts/#{part.slug}" if part.named?}"
+    part.chapters.select(&:named?).each do |chapter|
+      puts "  #{group_range(chapter).ljust(8)} #{chapter.name.ljust(32)} #{chapter.size} slide(s)  /chapters/#{chapter.slug}"
+    end
   end
 end
 
@@ -194,22 +237,21 @@ def chapters(argv)
 
   groups.each do |chapter|
     name = chapter.named? ? chapter.name : "(no chapter)"
-    range = chapter.size == 1 ? chapter.first_position.to_s : "#{chapter.first_position}-#{chapter.last_position}"
-    puts "#{range.ljust(8)} #{name.ljust(34)} #{chapter.size} slide(s)#{"  /#{chapter.slug}" if chapter.named?}"
+    puts "#{group_range(chapter).ljust(8)} #{name.ljust(34)} #{chapter.size} slide(s)#{"  /#{chapter.slug}" if chapter.named?}"
   end
 end
 
-# Chapter markers are ordinary front matter, so both of these go through the
-# same pure transform the editor and the overview UI use.
-def set_chapter(argv, name)
+# Part and chapter markers are ordinary front matter, so all of these go
+# through the same pure transform the editor and the overview UI use.
+def set_marker(kind, argv, name)
   presentation = find_deck!(argv.shift)
   slide = find_slide!(presentation, argv.shift)
-  slide.write!(Slide.with_front_matter(slide.markdown, key: "chapter", value: name))
+  slide.write!(Slide.with_front_matter(slide.markdown, key: kind, value: name))
 
   if name
-    puts "#{slide.basename}: chapter #{name.inspect}"
+    puts "#{slide.basename}: #{kind} #{name.inspect}"
   else
-    puts "#{slide.basename}: chapter marker removed"
+    puts "#{slide.basename}: #{kind} marker removed"
   end
 end
 
@@ -242,7 +284,9 @@ def add(argv, flags)
   end
 
   body = read_body(flags)
+  part = flags["part"]
   chapter = flags["chapter"]
+  body = Slide.with_front_matter(body || Presentation::NEW_SLIDE_BODY, key: "part", value: part) if part.is_a?(String)
   body = Slide.with_front_matter(body || Presentation::NEW_SLIDE_BODY, key: "chapter", value: chapter) if chapter.is_a?(String)
 
   slide = presentation.create_slide!(
@@ -250,7 +294,9 @@ def add(argv, flags)
     body: body,
     stem: flags.fetch("stem", "slide")
   )
-  puts "added slide #{slide.position}: #{slide.basename}#{" (opens chapter #{chapter.inspect})" if chapter.is_a?(String)}"
+  opens = { "part" => part, "chapter" => chapter }.select { |_, name| name.is_a?(String) }
+  note = opens.map { |kind, name| "#{kind} #{name.inspect}" }.join(", ")
+  puts "added slide #{slide.position}: #{slide.basename}#{" (opens #{note})" unless note.empty?}"
 end
 
 def write(argv, flags)
@@ -373,13 +419,15 @@ def validate(argv)
   problems << "slides/ directory is missing" unless presentation.slides_dir.directory?
   problems << "deck has no slides" if presentation.slides.empty?
 
-  # Two chapters whose names parameterize the same share a URL stem, so the
-  # second gets a "-2" suffix — which works, but makes the link order-dependent.
-  named = presentation.named_chapters
-  named.group_by { |chapter| chapter.name.parameterize }.each_value do |group|
-    next if group.size < 2
-    problems << "chapters #{group.map { |c| c.name.inspect }.join(' and ')} share a URL slug; " \
-                "their links (#{group.map(&:slug).join(', ')}) depend on deck order"
+  # Two parts or chapters whose names parameterize the same share a URL stem,
+  # so the second gets a "-2" suffix — which works, but makes the link
+  # order-dependent.
+  { "parts" => presentation.named_parts, "chapters" => presentation.named_chapters }.each do |kind, named|
+    named.group_by { |group| group.name.parameterize }.each_value do |same|
+      next if same.size < 2
+      problems << "#{kind} #{same.map { |g| g.name.inspect }.join(' and ')} share a URL slug; " \
+                  "their links (#{same.map(&:slug).join(', ')}) depend on deck order"
+    end
   end
 
   # Deliberately not checked: gaps or letter suffixes in the NN- prefixes
@@ -439,14 +487,16 @@ begin
   when "list" then list(argv)
   when "cat" then cat(argv, flags)
   when "render" then render(argv)
+  when "parts" then parts(argv)
   when "chapters" then chapters(argv)
-  when "chapter"
+  when "part", "chapter"
     slug = argv.shift
     n = argv.shift
     name = argv.shift
-    abort!("usage: deck chapter SLUG N NAME") if name.nil? || name.strip.empty?
-    set_chapter([slug, n], name.strip)
-  when "unchapter" then set_chapter(argv, nil)
+    abort!("usage: deck #{command} SLUG N NAME") if name.nil? || name.strip.empty?
+    set_marker(command, [slug, n], name.strip)
+  when "unpart" then set_marker("part", argv, nil)
+  when "unchapter" then set_marker("chapter", argv, nil)
   when "new" then new_deck(argv, flags)
   when "add" then add(argv, flags)
   when "write" then write(argv, flags)

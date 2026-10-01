@@ -1,5 +1,5 @@
 ---
-chapter: Week 7
+part: Week 7
 ---
 # Week 7
 

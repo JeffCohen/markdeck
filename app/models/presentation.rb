@@ -58,6 +58,32 @@ class Presentation
     end
   end
 
+  # A run of consecutive slides sharing a `part:` marker — the level above
+  # chapters, e.g. one lecture made of several sections. Chapters nest inside
+  # parts and never span two of them. `name` is nil for the leading run of
+  # slides before the deck's first part marker.
+  Part = Struct.new(:name, :slug, :chapters, keyword_init: true) do
+    def named?
+      !name.nil?
+    end
+
+    def slides
+      chapters.flat_map(&:slides)
+    end
+
+    def first_position
+      chapters.first.first_position
+    end
+
+    def last_position
+      chapters.last.last_position
+    end
+
+    def size
+      chapters.sum(&:size)
+    end
+  end
+
   def self.all
     return [] unless ROOT.exist?
 
@@ -146,23 +172,44 @@ class Presentation
     }
   end
 
-  # Slides grouped into chapters. A `chapter:` marker is STICKY: the slide
-  # carrying it opens a chapter and every following slide inherits it until the
-  # next marker, so a group costs one line rather than one per slide. Slides
-  # ahead of the first marker come back as a single unnamed leading chapter.
-  def chapters
+  # Slides grouped into parts, each holding its chapters. Both markers are
+  # STICKY: the slide carrying one opens a group and every following slide
+  # inherits it until the next marker of that kind, so a group costs one line
+  # rather than one per slide. Slides ahead of the first marker come back as an
+  # unnamed leading group.
+  def parts
     groups = []
 
     slides.each do |slide|
       # A marker always opens a new group, even when it repeats the current
-      # name — "start a chapter here" is what the author asked for. The leading
+      # name — "start one here" is what the author asked for. The leading
       # unnamed run needs a group to live in too.
-      groups << Chapter.new(name: slide.chapter, slug: nil, slides: []) if slide.chapter || groups.empty?
-      groups.last.slides << slide
+      groups << Part.new(name: slide.part, slug: nil, chapters: []) if slide.part || groups.empty?
+
+      # A part marker closes the running chapter, so a fresh part starts with
+      # an unnamed chapter run until its first chapter marker.
+      chapters = groups.last.chapters
+      chapters << Chapter.new(name: slide.chapter, slug: nil, slides: []) if slide.chapter || chapters.empty?
+      chapters.last.slides << slide
     end
 
-    assign_chapter_slugs(groups)
+    assign_slugs(groups, fallback: "part")
+    # Chapter slugs stay unique across the whole deck, not per part, so a
+    # chapter link never depends on which part it sits in.
+    assign_slugs(groups.flat_map(&:chapters), fallback: "chapter")
     groups
+  end
+
+  def named_parts
+    parts.select(&:named?)
+  end
+
+  def find_part(part_slug)
+    named_parts.find { |part| part.slug == part_slug }
+  end
+
+  def chapters
+    parts.flat_map(&:chapters)
   end
 
   def named_chapters
@@ -232,12 +279,12 @@ class Presentation
       raise ArgumentError, "expected a permutation of 1..#{slides.size}, got #{new_order_positions.inspect}"
     end
 
-    # Chapter membership has to follow the SLIDES, not their positions. The
-    # `chapter:` marker lives on whichever slide opens the chapter, so reordering
+    # Part and chapter membership has to follow the SLIDES, not their
+    # positions. A marker lives on whichever slide opens its group, so reordering
     # within a chapter would otherwise hand the marker to a different slide and
     # move the boundary instead of the slides — flipping a two-slide chapter left
     # one slide stranded in the chapter above, with no way to undo it by dragging.
-    chapters_before = preserve_chapters ? chapters.flat_map { |c| Array.new(c.size, c.name) } : nil
+    groups_before = preserve_chapters ? group_pairs : nil
 
     width = [2, slides.map { |s| s.basename[/\A(\d+)/, 1].to_s.length }.max || 2].max
 
@@ -258,28 +305,34 @@ class Presentation
 
     reload_slides!
 
-    if chapters_before
-      names = new_order_positions.map { |old_pos| chapters_before[old_pos - 1] }
-      apply_chapters!(rehome_moved_slide(names, single_move_index(new_order_positions)))
+    if groups_before
+      pairs = new_order_positions.map { |old_pos| groups_before[old_pos - 1] }
+      apply_groups!(rehome_moved_slide(pairs, single_move_index(new_order_positions)))
     end
 
     slides
   end
 
-  # Rewrite `chapter:` markers so that slide N belongs to `names[N - 1]`, with
-  # the first slide of each contiguous run carrying the marker and the rest
-  # inheriting it. Only slides whose marker actually changes are written.
-  def apply_chapters!(names)
-    previous = nil
+  # Rewrite `part:` and `chapter:` markers so that slide N belongs to the
+  # [part, chapter] pair `pairs[N - 1]`, with the first slide of each contiguous
+  # run carrying the marker and the rest inheriting it. A new part closes the
+  # running chapter, so a chapter continuing into a new part needs its marker
+  # repeated there. Only slides whose markers actually change are written.
+  def apply_groups!(pairs)
+    previous_part = previous_chapter = nil
     changed = false
 
     slides.each_with_index do |slide, idx|
-      wanted = names[idx]
-      marker = wanted && wanted != previous ? wanted : nil
-      previous = wanted
-      next if slide.chapter == marker
+      part, chapter = pairs[idx]
+      new_part = idx.zero? || part != previous_part
+      part_marker = new_part ? part : nil
+      chapter_marker = chapter && (new_part || chapter != previous_chapter) ? chapter : nil
+      previous_part = part
+      previous_chapter = chapter
+      next if slide.part == part_marker && slide.chapter == chapter_marker
 
-      slide.write!(Slide.with_front_matter(slide.markdown, key: "chapter", value: marker))
+      body = Slide.with_front_matter(slide.markdown, key: "part", value: part_marker)
+      slide.write!(Slide.with_front_matter(body, key: "chapter", value: chapter_marker))
       changed = true
     end
 
@@ -337,7 +390,14 @@ class Presentation
     end
   end
 
-  # Strict per-slide preservation keeps the moved slide's old chapter even when
+  # Each slide's [part, chapter] pair, in deck order, inherited markers included.
+  def group_pairs
+    parts.flat_map do |part|
+      part.chapters.flat_map { |chapter| Array.new(chapter.size, [part.name, chapter.name]) }
+    end
+  end
+
+  # Strict per-slide preservation keeps the moved slide's old [part, chapter] even when
   # it has been dropped somewhere that contradicts it — inside another chapter
   # (which would split that chapter into two runs with the same name), or above
   # every chapter, where a sticky marker would drag the slides below it into a
@@ -358,16 +418,16 @@ class Presentation
     names
   end
 
-  # URL-safe ids for chapter links. Two chapters can legitimately carry the
-  # same name (or names that parameterize identically), so collisions get a
+  # URL-safe ids for part and chapter links. Two groups can legitimately carry
+  # the same name (or names that parameterize identically), so collisions get a
   # numeric suffix in document order — stable as long as the names are.
-  def assign_chapter_slugs(groups)
+  def assign_slugs(groups, fallback:)
     seen = Hash.new(0)
 
     groups.each do |group|
       next unless group.named?
 
-      base = group.name.parameterize.presence || "chapter"
+      base = group.name.parameterize.presence || fallback
       seen[base] += 1
       group.slug = seen[base] > 1 ? "#{base}-#{seen[base]}" : base
     end

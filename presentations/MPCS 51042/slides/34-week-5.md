@@ -1,5 +1,5 @@
 ---
-chapter: Week 5
+part: Week 5
 ---
 # Week 5
 

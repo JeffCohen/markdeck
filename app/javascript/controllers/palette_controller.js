@@ -75,23 +75,32 @@ export default class extends Controller {
   }
 
   _render() {
-    // Unfiltered, results are still in deck order, so chapter headings are
-    // meaningful structure. Once you type, results are score-ordered and a
-    // heading per row would be noise — the chapter shows as a row hint instead.
+    // Unfiltered, results are still in deck order, so part and chapter
+    // headings are meaningful structure. Once you type, results are
+    // score-ordered and a heading per row would be noise — the part and
+    // chapter show as a row hint instead.
     const grouped = !this.inputTarget.value.trim()
+    let lastPart = null
     let lastChapter = null
 
     const html = this._filtered.map((s, i) => {
       const sel = i === this._selected ? 'aria-selected="true"' : ""
       const sub = labelFor(s, "subtitle")
       let header = ""
-      if (grouped && s.chapter !== lastChapter) {
-        lastChapter = s.chapter
-        if (s.chapter) {
-          header = `<li class="palette__chapter" role="presentation">${escapeHtml(s.chapter)}</li>`
+      if (grouped) {
+        // A part closes its chapter, so a new part re-announces the chapter
+        // even when the name repeats.
+        const newPart = s.part !== lastPart
+        if (newPart && s.part) {
+          header += `<li class="palette__chapter palette__part" role="presentation">${escapeHtml(s.part)}</li>`
         }
+        if ((newPart || s.chapter !== lastChapter) && s.chapter) {
+          header += `<li class="palette__chapter" role="presentation">${escapeHtml(s.chapter)}</li>`
+        }
+        lastPart = s.part
+        lastChapter = s.chapter
       }
-      const hint = sub || (!grouped && s.chapter ? s.chapter : "")
+      const hint = sub || (!grouped ? [s.part, s.chapter].filter(Boolean).join(" › ") : "")
       return `${header}<li ${sel} data-url="${s.url}">
                 <span class="palette__num">${s.n}</span>
                 <span class="palette__title">${escapeHtml(labelFor(s, "primary"))}</span>
@@ -150,7 +159,8 @@ function scoreSlide(s, q) {
     s.label   || "",
     s.heading || "",
     s.image_alt || "",
-    // Searchable so "week 6" or "unix" pulls up a whole section.
+    // Searchable so "week 6" or "unix" pulls up a whole part or section.
+    s.part    || "",
     s.chapter || "",
     `slide ${s.n}`,
   ].join(" • ").toLowerCase()

@@ -2,6 +2,12 @@
   class="slide"
   data-deck-target="slide"
   data-slide-index="<%= slide.index %>"
+  data-chapter-start="<%= chapter.slides.first.index %>"
+  data-chapter-end="<%= chapter.slides.last.index %>"
+  <% if part.named? %>
+    data-part-start="<%= part.first_position - 1 %>"
+    data-part-end="<%= part.last_position - 1 %>"
+  <% end %>
   data-action="click->deck#tapNavigate touchstart->deck#touchStart touchend->deck#touchEnd"
   aria-hidden="true"
 >

@@ -22,25 +22,30 @@ bin/deck cat welcome 3                         # read slide 3
 bin/deck cat welcome                           # whole deck, each slide headed by position/chapter/title
 bin/deck cat welcome 3-7                       # a slide range
 bin/deck cat welcome --chapter="Week 6"        # one chapter (name or slug)
+bin/deck cat welcome --part="Week 1"           # one part (name or slug)
 printf '# Title\n' | bin/deck add welcome --after=2 --stem=agenda --file=-
 bin/deck mv welcome 7 2
 bin/deck set welcome theme=aurora mode=light
 bin/deck chapters welcome                      # sections with their slide ranges
 bin/deck chapter welcome 6 "Week 6"            # start a section at slide 6
 bin/deck unchapter welcome 6                   # remove the marker, keep the slide
+bin/deck parts welcome                         # parts with their chapters and ranges
+bin/deck part welcome 1 "Week 1"               # start a part (the level above chapters) at slide 1
+bin/deck unpart welcome 1                      # remove the marker, keep the slide
 bin/deck validate welcome                      # run this after editing a deck
 ```
 
 **Edit slide content directly** — `slides/*.md` are just Markdown files; use normal file edits for prose, and `bin/deck validate <slug>` afterwards to catch silently-ignored front matter and missing images.
 
-**Read `FORMATTING.md` before writing slide bodies.** It documents the non-obvious authoring syntax: speaker notes, `center`/`label`/`chapter` front matter, mermaid fences, `.fill` images, multi-column blocks, and the theme-color spans. Getting these wrong fails silently rather than erroring.
+**Read `FORMATTING.md` before writing slide bodies.** It documents the non-obvious authoring syntax: speaker notes, `center`/`label`/`part`/`chapter` front matter, mermaid fences, `.fill` images, multi-column blocks, and the theme-color spans. Getting these wrong fails silently rather than erroring.
 
 Constraints worth remembering:
 
 - Themes: `minimal`, `editorial`, `terminal`, `aurora`. Modes: `dark`, `light`. Body sizes: `small`, `medium`, `large`. Anything else falls back to a default without complaint.
-- Front matter reads **only** `center`, `label`, and `chapter`. Other keys are dropped.
+- Front matter reads **only** `center`, `label`, `chapter`, and `part`. Other keys are dropped — by the editor's JS too (`ALLOWED_KEYS` in `editor_controller.js`), so a new key has to be added in both places.
 - `chapter:` is **sticky** — the slide carrying it opens a section and following slides inherit it until the next marker. `Presentation#chapters` derives the groups; nothing stores them.
 - `reorder!` rewrites `chapter:` markers so slides keep the chapter they were in (`preserve_chapters:`, default true). Without it, reordering inside a chapter hands the marker to a different slide and moves the boundary instead of the slides. A slide dropped inside another chapter joins it; one dragged above every chapter joins the leading ungrouped run. `create_slide!` passes `preserve_chapters: false` — a new slide has no marker, so it inherits the chapter it was inserted into. Chapters drive the overview's collapsible headers, ⌘K grouping, and `/presentations/<deck>/chapters/<slug>` (present one section, navigation clamped to it).
+- `part:` is the sticky level above chapters (`Presentation#parts`; `#chapters` is `parts.flat_map(&:chapters)`). A part marker closes the running chapter, so chapters nest strictly inside parts. `reorder!` preserves each slide's **[part, chapter] pair** and `apply_groups!` rewrites both markers. Parts get `/presentations/<deck>/parts/<slug>`, and the present-mode progress ring tracks the current part (else chapter). Chapter slugs stay unique deck-wide, independent of parts.
 - Slide positions in `bin/deck` are 1-based.
 - Prefix gaps and letter suffixes (`06a-columns.md`) are fine — ordering is a basename sort. `bin/deck renumber` normalizes them only if you want that.
 - One deck slug contains a space (`MPCS 51042`), so quote slug arguments.
@@ -51,4 +56,4 @@ Constraints worth remembering:
 
 Controllers stay strictly RESTful — the canonical 7 actions only. Operations that would otherwise be non-REST get their own resource (`slide_orders`, `presentations/settings`, `presentations/previews`); follow that pattern rather than adding a custom action.
 
-There is currently no test suite; `test/` is empty. Prefer minitest if adding one.
+Model tests live in `test/models` (minitest). Run them with `bundle exec ruby -Itest test/models/presentation_test.rb` — `bin/rails test` first runs a Tailwind build.

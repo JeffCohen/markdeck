@@ -193,6 +193,12 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
     break-inside: avoid;
   }
 
+  /* Presenting one part or chapter prints just that section: slides outside
+     the navigable range are tagged by deck_controller#connect. */
+  .deck > .slide.is-out-of-range {
+    display: none !important;
+  }
+
   /* Each @page is already exactly 1280x720, so the screen's fit-to-viewport
      scaling is not just unnecessary but wrong here — lay the canvas out flat.
      Type size now comes from the canvas itself rather than a print-only
@@ -917,6 +923,17 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   border-top: 1px solid color-mix(in oklab, var(--app-muted) 18%, transparent);
   margin-top: 0.25rem;
 }
+/* A part heading sits above its chapter headings: bolder, and the chapter
+   heading right under it drops its divider so the pair reads as one header. */
+.palette__part {
+  font-weight: 700;
+  color: var(--app-fg);
+}
+.palette__part + .palette__chapter {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0.1rem;
+}
 
 .palette__results li {
   display: flex;
@@ -973,6 +990,32 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   outline: 2px dashed var(--app-accent);
   outline-offset: 4px;
 }
+/* A chapter header inside a collapsed part disappears with its tiles. */
+.overview-chapter.is-hidden { display: none; }
+
+/* ===== Parts ===== */
+/* One level above chapters (e.g. a week holding several sections): same
+   full-width row as a chapter header, but heavier so the two levels read apart,
+   and not draggable — parts aren't reordered from the overview. */
+.overview-part {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0 0.4rem;
+  border-bottom: 2px solid color-mix(in oklab, var(--app-accent) 55%, transparent);
+  margin-top: 1.4rem;
+}
+.overview-part:first-child { margin-top: 0; }
+.overview-part + .overview-chapter { margin-top: 0.2rem; }
+.overview-part__name {
+  font-family: var(--md-font-heading);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--app-fg);
+}
+
 /* Children keep their own affordance rather than inheriting the grab cursor. */
 .overview-chapter__toggle,
 .overview-chapter__present { cursor: pointer; }
@@ -1117,6 +1160,17 @@ body.peek-preview .slide.is-current > .speaker-peek--preview {
   border-left: 1px solid color-mix(in oklab, var(--app-muted) 30%, transparent);
 }
 .overview-edit__chapter-clear:hover { opacity: 1; color: #ef4444; }
+
+/* The part and chapter controls share one row above the thumbnail. */
+.overview-edit__markers {
+  align-self: stretch;
+  display: flex;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.overview-edit__part.is-set {
+  background: color-mix(in oklab, var(--app-accent) 14%, var(--app-bg));
+}
 
 /* Replaces the control in place, so it has to sit in the same flow row rather
    than floating over the thumbnail. */

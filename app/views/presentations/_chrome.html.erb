@@ -38,12 +38,12 @@
   ← overview
 </a>
 
-<%# Presenting one chapter: name the scope and offer a way out of it, so it's
-    never a mystery why arrowing right stops at the end of the section. %>
-<% if defined?(@chapter) && @chapter %>
+<%# Presenting one part or chapter: name the scope and offer a way out of it,
+    so it's never a mystery why arrowing right stops at the end of the section. %>
+<% if (scope = @part || @chapter) %>
   <div class="fixed top-4 left-1/2 -translate-x-1/2 text-xs font-mono flex items-center gap-2 select-none">
-    <span style="color: var(--md-accent);"><%= @chapter.name %></span>
-    <a href="<%= presentation_slide_path(presentation, n: @chapter.first_position) %>"
+    <span style="color: var(--md-accent);"><%= scope.name %></span>
+    <a href="<%= presentation_slide_path(presentation, n: scope.first_position) %>"
        class="opacity-40 hover:opacity-100 transition-opacity"
        style="color: var(--md-muted);"
        data-turbo="false"
@@ -81,6 +81,7 @@
     </dl>
     <p class="text-xs mt-4" style="color: var(--md-muted);">
       Export PDF: <kbd>⌘P</kbd> &rarr; "Save as PDF" &middot; one slide per page, landscape.
+      Presenting a part or chapter exports just that section.
     </p>
     <p class="text-xs mt-6" style="color: var(--md-muted);">Click anywhere to close</p>
   </div>

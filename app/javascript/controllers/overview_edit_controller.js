@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Deck landing page grid: drag-to-reorder, +Add tile, per-tile delete.
 export default class extends Controller {
-  static targets = ["tile", "add", "chapterHeader"]
+  static targets = ["tile", "add", "chapterHeader", "partHeader"]
   static values  = {
     slug:       String,
     createUrl:  String,
@@ -76,6 +76,7 @@ export default class extends Controller {
     this.chapterHeaderTargets.forEach(h => h.classList.remove("is-dragging", "is-drop-target"))
     this._dragFromPos = null
     this._dragChapterSlug = null
+    this._dragChapterPart = null
   }
 
   // Slide tiles plus the trailing "+ new slide" tile, in grid order. Tiles inside
@@ -113,10 +114,11 @@ export default class extends Controller {
     if (!tile) return null
 
     // Never focus something invisible: if the slide sits in a collapsed
-    // chapter, open that chapter rather than silently focusing a hidden tile.
-    if (tile.offsetParent === null && tile.dataset.chapterSlug) {
+    // chapter or part, open it rather than silently focusing a hidden tile.
+    if (tile.offsetParent === null && (tile.dataset.chapterSlug || tile.dataset.partSlug)) {
       const collapsed = this._collapsed()
       collapsed.delete(tile.dataset.chapterSlug)
+      collapsed.delete(this._partKey(tile.dataset.partSlug))
       this._saveCollapsed(collapsed)
       this._applyCollapsed()
       this._scaleThumbs()
@@ -125,10 +127,12 @@ export default class extends Controller {
     return tile
   }
 
-  // ---- chapters: collapse ---------------------------------------------------
+  // ---- parts & chapters: collapse --------------------------------------------
 
-  // Collapsed chapters live in localStorage per deck — there's no database, and
-  // this is view state that shouldn't touch the slide files.
+  // Collapsed chapters and parts live in localStorage per deck — there's no
+  // database, and this is view state that shouldn't touch the slide files.
+  // Parts share the set under a "part:" prefix so their slugs can't collide
+  // with chapter slugs.
   get _collapseKey() {
     return `markdeck:collapsed:${this.slugValue}`
   }
@@ -150,9 +154,21 @@ export default class extends Controller {
     }
   }
 
+  _partKey(slug) {
+    return `part:${slug}`
+  }
+
+  togglePart(e) {
+    e.stopPropagation()
+    this._toggleCollapsed(this._partKey(e.currentTarget.dataset.partSlug))
+  }
+
   toggleChapter(e) {
     e.stopPropagation()
-    const slug = e.currentTarget.dataset.chapterSlug
+    this._toggleCollapsed(e.currentTarget.dataset.chapterSlug)
+  }
+
+  _toggleCollapsed(slug) {
     const collapsed = this._collapsed()
     collapsed.has(slug) ? collapsed.delete(slug) : collapsed.add(slug)
     this._saveCollapsed(collapsed)
@@ -163,46 +179,77 @@ export default class extends Controller {
 
   _applyCollapsed() {
     const collapsed = this._collapsed()
+    const partCollapsed = (slug) => !!slug && collapsed.has(this._partKey(slug))
 
     this.tileTargets.forEach(tile => {
       const slug = tile.dataset.chapterSlug
-      tile.classList.toggle("is-collapsed", !!slug && collapsed.has(slug))
+      tile.classList.toggle("is-collapsed",
+        (!!slug && collapsed.has(slug)) || partCollapsed(tile.dataset.partSlug))
     })
 
     this.chapterHeaderTargets.forEach(header => {
-      const isCollapsed = collapsed.has(header.dataset.chapterSlug)
-      header.classList.toggle("is-collapsed", isCollapsed)
-      const toggle = header.querySelector(".overview-chapter__toggle")
-      if (toggle) {
-        toggle.setAttribute("aria-expanded", String(!isCollapsed))
-        toggle.textContent = isCollapsed ? "▸" : "▾"
-      }
+      this._setToggle(header, collapsed.has(header.dataset.chapterSlug))
+      header.classList.toggle("is-hidden", partCollapsed(header.dataset.partSlug))
+    })
+
+    this.partHeaderTargets.forEach(header => {
+      this._setToggle(header, partCollapsed(header.dataset.partSlug))
     })
   }
 
-  // ---- chapters: markers ----------------------------------------------------
+  _setToggle(header, isCollapsed) {
+    header.classList.toggle("is-collapsed", isCollapsed)
+    const toggle = header.querySelector(".overview-chapter__toggle")
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", String(!isCollapsed))
+      toggle.textContent = isCollapsed ? "▸" : "▾"
+    }
+  }
+
+  // ---- parts & chapters: markers ---------------------------------------------
 
   startChapter(e) {
     e.stopPropagation()
-    this._editChapterName(e.currentTarget, "")
+    this._editMarkerName("chapter", e.currentTarget, "")
   }
 
   renameChapter(e) {
     e.stopPropagation()
-    this._editChapterName(e.currentTarget.closest(".overview-edit__chapter"), e.currentTarget.textContent.trim())
+    this._editMarkerName("chapter", e.currentTarget.closest(".overview-edit__chapter"), e.currentTarget.textContent.trim())
+  }
+
+  async clearChapter(e) {
+    e.stopPropagation()
+    await this._writeMarker("chapter", e.currentTarget.dataset.position, null)
+  }
+
+  startPart(e) {
+    e.stopPropagation()
+    this._editMarkerName("part", e.currentTarget, "")
+  }
+
+  renamePart(e) {
+    e.stopPropagation()
+    this._editMarkerName("part", e.currentTarget.closest(".overview-edit__chapter"), e.currentTarget.textContent.trim())
+  }
+
+  async clearPart(e) {
+    e.stopPropagation()
+    await this._writeMarker("part", e.currentTarget.dataset.position, null)
   }
 
   // Swap the control for a text input rather than using prompt(), which blocks
   // the page and looks nothing like the rest of the UI. Enter commits, Escape
   // or blurring without a change puts the original control back.
-  _editChapterName(control, current) {
+  _editMarkerName(kind, control, current) {
     const position = control.dataset.position || control.querySelector("[data-position]")?.dataset.position
+    const noun = kind === "part" ? "Part name" : "Chapter name"
     const input = document.createElement("input")
     input.type = "text"
     input.className = "overview-edit__chapter-input"
     input.value = current
-    input.placeholder = "Chapter name"
-    input.setAttribute("aria-label", "Chapter name")
+    input.placeholder = noun
+    input.setAttribute("aria-label", noun)
 
     let settled = false
     const restore = () => {
@@ -215,7 +262,7 @@ export default class extends Controller {
       const name = input.value.trim()
       if (!name || name === current) return restore()
       settled = true
-      this._writeChapter(position, name)
+      this._writeMarker(kind, position, name)
     }
 
     input.addEventListener("keydown", (ev) => {
@@ -231,26 +278,22 @@ export default class extends Controller {
     input.select()
   }
 
-  async clearChapter(e) {
-    e.stopPropagation()
-    await this._writeChapter(e.currentTarget.dataset.position, null)
-  }
-
-  // PATCH with a name opens a chapter at that slide; DELETE removes the marker.
-  // Either way the grouping is derived from the files, so reload to re-render.
-  async _writeChapter(position, name) {
-    const url = `/presentations/${encodeURIComponent(this.slugValue)}/slides/${position}/chapter`
+  // PATCH with a name opens a part or chapter at that slide; DELETE removes the
+  // marker. Either way the grouping is derived from the files, so reload to
+  // re-render. `kind` is "part" or "chapter" — both the URL and the param key.
+  async _writeMarker(kind, position, name) {
+    const url = `/presentations/${encodeURIComponent(this.slugValue)}/slides/${position}/${kind}`
     try {
       const res = await fetch(url, {
         method: name === null ? "DELETE" : "PATCH",
         headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": csrfToken() },
-        body: name === null ? undefined : JSON.stringify({ chapter: { name } }),
+        body: name === null ? undefined : JSON.stringify({ [kind]: { name } }),
       })
-      if (!res.ok) throw new Error(`chapter HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`${kind} HTTP ${res.status}`)
       window.location.reload()
     } catch (err) {
-      console.warn("chapter update failed:", err)
-      alert("Could not update the chapter — see console.")
+      console.warn(`${kind} update failed:`, err)
+      alert(`Could not update the ${kind} — see console.`)
     }
   }
 
@@ -416,10 +459,14 @@ export default class extends Controller {
     const to = from + delta
     if (from === -1) return
 
-    // The leading unnamed run has to stay first: its slides have no marker, so
-    // anything above the first chapter would be swallowed by whatever follows.
-    const floor = blocks.length && blocks[0].slug === "" ? 1 : 0
-    if (to < floor || to >= blocks.length) return
+    // Chapters move only within their own part — crossing into the next one
+    // would carry the chapter's part along and split that part in two. And a
+    // part's leading unnamed run has to stay first in it: its slides have no
+    // chapter marker, so anything above them would swallow them.
+    const part = blocks[from].part
+    const first = blocks.findIndex(b => b.part === part)
+    const floor = blocks[first].slug === "" ? first + 1 : first
+    if (to < floor || to >= blocks.length || blocks[to].part !== part) return
 
     const reordered = [...blocks]
     ;[reordered[from], reordered[to]] = [reordered[to], reordered[from]]
@@ -431,6 +478,7 @@ export default class extends Controller {
   chapterDragStart(e) {
     const header = e.currentTarget
     this._dragChapterSlug = header.dataset.chapterSlug
+    this._dragChapterPart = header.dataset.partSlug
     header.classList.add("is-dragging")
     e.dataTransfer.effectAllowed = "move"
     e.dataTransfer.setData("text/plain", this._dragChapterSlug)
@@ -439,6 +487,8 @@ export default class extends Controller {
   chapterDragOver(e) {
     if (!this._dragChapterSlug) return
     if (e.currentTarget.dataset.chapterSlug === this._dragChapterSlug) return
+    // Same rule as moveChapter: a chapter stays inside its own part.
+    if (e.currentTarget.dataset.partSlug !== this._dragChapterPart) return
 
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
@@ -466,7 +516,7 @@ export default class extends Controller {
     const blocks = this._chapterBlocks()
     const from = blocks.findIndex(b => b.slug === fromSlug)
     const to = blocks.findIndex(b => b.slug === toSlug)
-    if (from === -1 || to === -1) return null
+    if (from === -1 || to === -1 || blocks[from].part !== blocks[to].part) return null
 
     const [moved] = blocks.splice(from, 1)
     blocks.splice(to, 0, moved)
@@ -474,15 +524,17 @@ export default class extends Controller {
   }
 
   // Contiguous runs of slide positions in document order, one per chapter plus
-  // the leading unnamed run. Built from every tile including hidden ones, since
-  // a collapsed chapter still has to appear in the reordered list.
+  // each part's leading unnamed run, tagged with the part they sit in. Built
+  // from every tile including hidden ones, since a collapsed chapter still has
+  // to appear in the reordered list.
   _chapterBlocks() {
     const blocks = []
 
     this.tileTargets.forEach(tile => {
       const slug = tile.dataset.chapterSlug || ""
+      const part = tile.dataset.partSlug || ""
       const last = blocks[blocks.length - 1]
-      if (!last || last.slug !== slug) blocks.push({ slug, positions: [] })
+      if (!last || last.slug !== slug || last.part !== part) blocks.push({ slug, part, positions: [] })
       blocks[blocks.length - 1].positions.push(Number(tile.dataset.position))
     })
 

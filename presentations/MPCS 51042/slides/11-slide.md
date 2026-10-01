@@ -3,6 +3,8 @@ chapter: Week 1 Content
 ---
 # Backus-Naur Form
 
+_by John Backus and Peter Naur, 1960_
+
 A notation for describing the **syntax** of a language — which strings are legal.
 
 ```
@@ -22,7 +24,7 @@ A notation for describing the **syntax** of a language — which strings are leg
 
 <span class="accent">Valid</span> `<sum>`: `7` · `42` · `3+14+159`
 
-<span class="muted">Invalid</span> `<sum>`: `+3` · `4+` · `1++2`
+<span class="highlight">Invalid</span> `<sum>`: `+3` · `4+` · `1++2`
 
 </div>
 
