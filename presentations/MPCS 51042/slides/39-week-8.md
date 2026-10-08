@@ -14,3 +14,4 @@ part: Week 8
 <!-- notes -->
 Placeholder adapted from last year's week 7 (lectures/week7, labs/lab7 — UML diagram with inheritance and composition, streamflix.csv).
 Protocols: object, number, comparison, conversion, container, iteration, attribute, function, context manager.
+Small-int cache / interning demo parked for this topic: ~/mpcs/2026/lectures/later/small_int_cache.py (pulled from week 2).
