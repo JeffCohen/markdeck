@@ -35,7 +35,7 @@ gem "thruster", require: false
 # Markdown rendering (GitHub Flavored Markdown)
 gem "commonmarker", "~> 2.0"
 # Syntax highlighting for code fences
-gem "rouge", "~> 4.5"
+gem "rouge", "~> 5.0"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
