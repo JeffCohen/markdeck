@@ -65,7 +65,7 @@ Markdown syntax supported (tables, code fences, images, etc).
   <img src="images/foo.png" class="fill-below" />
   ```
   Fills whatever vertical space is left below the preceding content (e.g. a heading) instead of the whole slide. Both use `object-fit: cover` (crops to fill without distorting) — swap to `object-contain` inline if you'd rather letterbox.
-- **Code blocks**: fence with a language tag for syntax highlighting, e.g. ` ```ruby `.
+- **Code blocks**: fence with a language tag for syntax highlighting, e.g. ` ```ruby `. To shrink one (say, to leave room for a diagram below it), wrap it in `<div class="code-sm">`, with a blank line just inside each tag so the fence still renders.
 - **Multi-column layouts**: wrap the whole block in `<div class="cols">` (2 columns) or `<div class="cols-3">` (3 columns), and mark where each column ends with `<!-- col -->` on its own line:
   ```
   <div class="cols">

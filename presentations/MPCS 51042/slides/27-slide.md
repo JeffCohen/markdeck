@@ -31,3 +31,4 @@ part: Week 2
 Builds on week 1's memory management: a node is an object on the heap, and a "next" attribute is just a reference to another object.
 Standard I/O, file I/O, and coding style moved to week 3.
 Live-coding files: ~/mpcs/2026/lectures/week2, numbered 01_–14_ in agenda order. The real dict/set tour moved to week 3 (lectures/week3/dict_and_set.py).
+e
