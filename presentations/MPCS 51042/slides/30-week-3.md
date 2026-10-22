@@ -5,16 +5,18 @@ part: Week 3
 
 * Challenge: build a list without a list
 * Mutability
-* Packages and `import`
+* Functional-style programming
+* Python "Packaging"
 * Names, namespaces, frames, and scope
-* Functional-style programming: `lambda`, comprehensions, pure functions
 
 BREAK
 
 * 10-minute challenge: one-liners
 * Files and standard input
 * Intro to `uv`: installing packages
-* Quiz 3 [NEXT WEEK: EXAM #1]
+* Quiz 3
+
+__NEXT WEEK: EXAM #1__
 
 <!-- notes -->
 Class order is in ~/mpcs/2026/lectures/week3/SCRIPT.md (instructor only). Students' copy of the agenda: week3/README.md.

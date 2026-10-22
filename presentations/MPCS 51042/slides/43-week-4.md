@@ -4,18 +4,21 @@ part: Week 4
 # Week 4
 
 * **Exam 1**
-* `map` and `filter` vs. comprehensions
-* Lazy evaluation: generator expressions, `yield`, generator functions
-* `functools.reduce` and a taste of `itertools`
-* Closures: functions that return functions
-* The `assert` statement
+
+BREAK
+
+* Files (from week 3)
+* Converting vs. casting
 * Exceptions
-* Lab: pipeline architectures
+* `map` and `filter` vs. comprehensions
+* Lazy evaluation: generators and `yield`
+* Lab: a movie-data pipeline
 * Imperative vs. functional style
 
 <!-- notes -->
-Second half of the functional module. Week 3 covered the first half (lectures/week3/06_functional_basics.ipynb): functions as values, lambda, list/dict/set comprehensions, statements vs expressions, pure functions vs side effects, and sum/min/max/any/all/zip/enumerate.
-Generator expressions: same syntax as a comprehension without the brackets, e.g. any(n > 40 for n in nums). Week 3 deliberately wrote any([...]) with brackets.
-Closures set up decorators later in the course. They're also where to add the E in LEGB (week 3's Scope slide shows only Local, Global, Built-in) and the lexical vs dynamic scope contrast.
-Lab adapted from last year's week 3 (lectures/week3, labs/lab3: the movies.csv pipeline), ending with the imperative vs functional summary.
-Exceptions could move into week 3's 08_files.py (FileNotFoundError) if this week runs long.
+Class order is in ~/mpcs/2026/lectures/week4/SCRIPT.md (instructor only). Students' copy of the agenda: week4/README.md.
+Second half of the functional module. Week 3 covered the first half (06_functional_basics.ipynb): functions as values, lambda, comprehensions, pure functions, sum/min/max/any/all/zip/enumerate.
+Files come first because week 3 ran out of time before 08_files.py, and its last TODO ("what happens with a file that doesn't exist?") opens exceptions.
+Generator expressions: same syntax as a comprehension with parentheses, e.g. any(n > 40 for n in nums). Week 3 deliberately wrote any([...]) with brackets.
+Moved out of this week: closures (later, with decorators; they're also where the E in LEGB comes in), functools.reduce and itertools (dropped for now), and uv / 10_fancy_word_count.py / 11_breakout.py (week 5, with "Managing a project with uv").
+Lab adapted from last year's lab 3 (movies.csv).
