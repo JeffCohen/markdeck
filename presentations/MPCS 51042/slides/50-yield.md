@@ -1,4 +1,4 @@
-# Where yield Goes
+# Generator Functions
 
 <div class="cols">
 

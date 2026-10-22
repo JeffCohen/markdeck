@@ -12,7 +12,7 @@ BREAK
 * Exceptions
 * `map` and `filter` vs. comprehensions
 * Lazy evaluation: generators and `yield`
-* Lab: a movie-data pipeline
+* Lab: a weather pipeline, with live data from a web API
 * Imperative vs. functional style
 
 <!-- notes -->
@@ -21,4 +21,4 @@ Second half of the functional module. Week 3 covered the first half (06_function
 Files come first because week 3 ran out of time before 08_files.py, and its last TODO ("what happens with a file that doesn't exist?") opens exceptions.
 Generator expressions: same syntax as a comprehension with parentheses, e.g. any(n > 40 for n in nums). Week 3 deliberately wrote any([...]) with brackets.
 Moved out of this week: closures (later, with decorators; they're also where the E in LEGB comes in), functools.reduce and itertools (dropped for now), and uv / 10_fancy_word_count.py / 11_breakout.py (week 5, with "Managing a project with uv").
-Lab adapted from last year's lab 3 (movies.csv).
+Lab: 05_weather.py, live forecasts from open-meteo.com through urllib, a teaser for week 5's requests. The movies lab (last year's lab 3) moved to Homework 4: ~/mpcs/2026/hw/week4/.
