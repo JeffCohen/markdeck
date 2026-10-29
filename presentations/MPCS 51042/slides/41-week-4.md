@@ -1,11 +1,14 @@
 ---
 part: Week 4
 ---
-# Week 4
+# WE WILL RESUME AT 7:05pm
 
 * **Exam 1**
 
-BREAK
+* YES: Google, Notes, Homework, Quizzes
+* NO: Google AI, Claude, other people
+
+BREAK (Download week4.zip from Files/Lectures in Canvas)
 
 * Files (from week 3)
 * Converting vs. casting
